@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "SerialParser.h"
+#include "OutputGateway.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -32,6 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+constexpr uint32_t MAIN_LOOP_TIME_MS = 50;
+constexpr uint32_t LED_BLINK_TIME_MS = 500;
 
 /* USER CODE END PD */
 
@@ -53,6 +56,10 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint8_t UartRcvBuffer;
+
+SerialParser theSerialParser;
+OutputGateway theOutputGateway;
 
 /* USER CODE END PV */
 
@@ -82,7 +89,9 @@ static void MX_TIM6_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  SerialParser theSerialParser;
+  uint32_t mainLoopTimer = 0;
+  uint32_t ledTimer = 0;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -112,6 +121,9 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -121,6 +133,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	if (HAL_GetTick() < mainLoopTimer)
+		// tick rolled over, reset timer
+		mainLoopTimer = 0;
+
+	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
+	{
+		theSerialParser.ProcessIncomingData();
+		mainLoopTimer = HAL_GetTick();
+	}
+
+	if ((HAL_GetTick() - ledTimer) >= LED_BLINK_TIME_MS)
+	{
+		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+		ledTimer = HAL_GetTick();
+	}
   }
   /* USER CODE END 3 */
 }
@@ -614,6 +641,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	theSerialParser.ReceiveChar(UartRcvBuffer);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
+	theOutputGateway.setReceiving();
+}
 
 /* USER CODE END 4 */
 
