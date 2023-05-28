@@ -5,25 +5,57 @@
  *      Author: tim
  */
 
-#include <Message.h>
 #include <cstring>
+#include "Message.h"
+#include "OutputGateway.h"
+
+extern OutputGateway theOutputGateway;
 
 Message::Message()
 {
 
 }
 
+Message::Message(const Message& other) :
+		m_commandCode{other.m_commandCode},
+		m_payloadLength{other.m_payloadLength}
+{
+	m_crc[0] = other.m_crc[0];
+	m_crc[1] = other.m_crc[1];
+
+	if (m_payloadLength)
+	{
+		m_pPayload = new uint8_t[m_payloadLength];
+		std::memcpy(m_pPayload, other.m_pPayload, m_payloadLength);
+	}
+}
+
+Message::Message(Message&& other) :
+		m_commandCode{other.m_commandCode},
+		m_payloadLength{other.m_payloadLength}
+{
+	m_crc[0] = other.m_crc[0];
+	m_crc[1] = other.m_crc[1];
+
+	if (m_payloadLength)
+	{
+		m_pPayload = other.m_pPayload;
+		other.m_pPayload = nullptr;
+		other.m_payloadLength = 0;
+	}
+}
+
 Message::~Message()
 {
 	if (m_pPayload != nullptr)
-		delete m_pPayload;
+		delete[] m_pPayload;
 }
 
 bool Message::loadFromBytes(uint8_t message_length, const uint8_t* const raw_message)
 {
 	if (message_length < MINIMUM_MESSAGE_LENGTH)
 	{
-		// TODO: add logging
+		theOutputGateway.logString(warning, "Received message less than the minimum length");
 		return false;
 	}
 
@@ -44,4 +76,9 @@ bool Message::crcCheck(uint8_t payload_length, const uint8_t* const raw_message)
 {
 	// TODO: CRC calculation
 	return true;
+}
+
+void Message::calculateCRC()
+{
+
 }

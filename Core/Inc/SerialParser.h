@@ -25,12 +25,20 @@ constexpr size_t STOP_SEQUENCE_LENGTH = sizeof(STOP_SEQUENCE)/sizeof(char);
 constexpr size_t MAX_INCOMING_MESSAGE_LENGTH = 128;
 constexpr size_t INCOMING_BUFFER_SIZE = 128;
 
+#ifdef DEBUG
+	constexpr uint32_t SERIAL_TRANSMISSION_TIMEOUT_TICKS = 5000;
+#else
+	constexpr uint32_t SERIAL_TRANSMISSION_TIMEOUT_TICKS = 50;
+#endif
+
 bool sequenceMatch(const char* ref_sequence, const char* comp_sequence, size_t sequenceLength);
 
 class SerialParser {
 public:
 	SerialParser();
 	~SerialParser();
+
+	SerialParser(const SerialParser&) = delete;
 
 	void ReceiveChar(uint8_t new_char);
 	void ProcessIncomingData();
@@ -47,6 +55,8 @@ private:
 
 	uint8_t m_candidateMessage[MAX_INCOMING_MESSAGE_LENGTH];
 	uint32_t m_candidateMessageLength{0};
+
+	uint32_t m_lastCharReceivedTime{0};
 };
 
 

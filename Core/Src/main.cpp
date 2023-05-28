@@ -20,6 +20,7 @@
 #include "main.h"
 #include "SerialParser.h"
 #include "OutputGateway.h"
+#include "MessageHandler.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -60,6 +61,7 @@ uint8_t UartRcvBuffer;
 
 SerialParser theSerialParser;
 OutputGateway theOutputGateway;
+MessageHandler theMessageHandler;
 
 /* USER CODE END PV */
 
@@ -140,6 +142,9 @@ int main(void)
 	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
 	{
 		theSerialParser.ProcessIncomingData();
+		theOutputGateway.processOutgoingMessages();
+		theMessageHandler.processMessages();
+
 		mainLoopTimer = HAL_GetTick();
 	}
 

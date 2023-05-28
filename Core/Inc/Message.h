@@ -18,14 +18,15 @@ class Message
 public:
 	Message();
 	~Message();
-
-	Message(Message& other) = delete;
+	Message(const Message&);
+	Message(Message&&);
 
 	bool loadFromBytes(uint8_t payload_length, const uint8_t* const raw_message);
+	void calculateCRC();
 	uint8_t getCommandCode() { return m_commandCode; }
 	uint32_t getPayloadLength() { return m_payloadLength; }
 	uint8_t* getPayload() { return m_pPayload; }
-
+	uint8_t* getCRC() { return m_crc; };
 
 private:
 	uint8_t m_commandCode{0};

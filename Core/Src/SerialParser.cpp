@@ -9,8 +9,10 @@
 #include "SerialParser.h"
 #include "Message.h"
 #include "OutputGateway.h"
+#include "MessageHandler.h"
 
 extern OutputGateway theOutputGateway;
+extern MessageHandler theMessageHandler;
 
 bool sequenceMatch(const char* refSequence, const char* compSequence, size_t sequenceLength)
 {
@@ -35,19 +37,34 @@ SerialParser::~SerialParser()
 // ISR function to receive the incoming character from the UART buffer
 void SerialParser::ReceiveChar(uint8_t new_char)
 {
+	m_lastCharReceivedTime = HAL_GetTick();
+
 	if (m_incomingBufferPtr < INCOMING_BUFFER_SIZE)
 		m_incomingBuffer[m_incomingBufferPtr++] = new_char;
-
-	// TODO: Log incoming buffer overflow if it occurs
+	else
+	{
+		theOutputGateway.logString(error, "Input serial buffer overflow, discarding buffer");
+		m_incomingBufferPtr = 0;
+	}
 }
 
 void SerialParser::ProcessIncomingData()
 {
-	// TODO: add timeout if time between characters is too long, discard message sequence and start fresh;
-	// to do this, just set the state to IDLE before the switch statement
-
 	uint8_t new_char;
 	std::string logString;
+
+	if (m_state != IDLE)
+	{
+		// check for timeout in transmission
+		if (HAL_GetTick() < m_lastCharReceivedTime)
+			// clock has rolled over, neglect potential timeout
+			m_lastCharReceivedTime = HAL_GetTick();
+		else if ((HAL_GetTick() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
+		{
+			theOutputGateway.logString(warning, "Serial packet timed out before completion, discarding");
+			m_state = IDLE;
+		}
+	}
 
 	for (size_t bufferIdx = 0; bufferIdx < m_incomingBufferPtr; bufferIdx++)
 	{
@@ -57,7 +74,7 @@ void SerialParser::ProcessIncomingData()
 		// the push_back method
 		logString = "Received new character ";
 		logString.push_back(new_char);
-		theOutputGateway.logString(info, logString);
+		theOutputGateway.logString(debug, logString);
 
 		switch(m_state)
 		{
@@ -100,12 +117,11 @@ void SerialParser::ProcessIncomingData()
 								  STOP_SEQUENCE_LENGTH))
 				{
 					// we have received the stop sequence, message is complete
-					Message* msg = new Message;
-					msg->loadFromBytes(m_candidateMessageLength - STOP_SEQUENCE_LENGTH, m_candidateMessage);
+					Message msg;
+					msg.loadFromBytes(m_candidateMessageLength - STOP_SEQUENCE_LENGTH, m_candidateMessage);
+					theMessageHandler.loadIncomingMessage(msg);
 
-					// TODO pass message to message handler
-
-					delete msg;
+					theOutputGateway.logString(debug, std::string("Received stop sequence, processing message"));
 
 					// we are finished receiving the current message so return to IDLE
 					m_state = IDLE;
@@ -126,7 +142,9 @@ void SerialParser::ProcessIncomingData()
 			break;
 
 		default:
-			// TODO: log this
+			theOutputGateway.logString(error, "SerialParser in invalid state, resetting to idle");
+			m_state = IDLE;
+			m_candidateMessageLength = 0;
 			break;
 		}
 	}
