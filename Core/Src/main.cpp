@@ -125,6 +125,10 @@ int main(void)
 
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
+#ifdef DEBUG
+  theOutputGateway.logString(info, "Hammock motor driver, version x.y.z");
+#endif
+
 
   /* USER CODE END 2 */
 
@@ -142,8 +146,8 @@ int main(void)
 	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
 	{
 		theSerialParser.ProcessIncomingData();
-		theOutputGateway.processOutgoingMessages();
 		theMessageHandler.processMessages();
+		theOutputGateway.processOutgoingMessages();
 
 		mainLoopTimer = HAL_GetTick();
 	}

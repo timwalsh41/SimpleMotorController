@@ -9,18 +9,13 @@
 #define INC_SERIALPARSER_H_
 
 #include "stdint.h"
+#include "CommandInterface.h"
 
 enum ParserState {
 	IDLE,
 	STARTING,
 	RECEIVING
 };
-
-constexpr char START_SEQUENCE[] = {'Q', 'R', 'S', 'T'};
-constexpr char STOP_SEQUENCE[] = {'M', 'N', 'O', 'P'};
-
-constexpr size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE)/sizeof(char);
-constexpr size_t STOP_SEQUENCE_LENGTH = sizeof(STOP_SEQUENCE)/sizeof(char);
 
 constexpr size_t MAX_INCOMING_MESSAGE_LENGTH = 128;
 constexpr size_t INCOMING_BUFFER_SIZE = 128;

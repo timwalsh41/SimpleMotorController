@@ -35,8 +35,10 @@ public:
 	void setTransmitting() { m_receiving = false; }
 
 private:
-	void sendStringOutput(const std::string& outString);
-	void sendMessageOutput(const Message& outMessage);
+	void transmitString(const std::string& outString);
+	void transmitMessage(const Message& outMessage);
+	void addStartStopSequence(const uint8_t* inputArray, uint32_t inputLength, uint8_t** outputArray, uint32_t& outputLength) const;
+
 	bool m_receiving = true;
 	static constexpr std::string_view logLevelString[] = {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"};
 	std::queue<std::string> m_logStringQueue;
