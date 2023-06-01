@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include "Message.h"
+#include "CommandInterface.h"
 
 enum LogLevel {
 	debug = 0,

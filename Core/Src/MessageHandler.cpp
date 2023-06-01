@@ -8,12 +8,13 @@
 #include "MessageHandler.h"
 #include "CommandInterface.h"
 #include "OutputGateway.h"
+#include "Version.h"
 
 extern OutputGateway theOutputGateway;
 
 MessageHandler::MessageHandler()
 {
-
+	buildCommandMap();
 }
 
 MessageHandler::~MessageHandler()
@@ -53,7 +54,36 @@ void MessageHandler::processMessages()
 			continue;
 		}
 
-		// TODO: Resume here
-		theOutputGateway.logString(debug, "Received valid message, processing");
+		auto key = m_commandMap.find(msg.getCommandCode());
+		if (key == m_commandMap.end())
+		{
+			// invalid command code recceived
+			Message response;
+			uint8_t payload;
+
+			response.setCommandCode(msg.getCommandCode());
+			response.setAck();
+
+			payload = ACK_INVALID_COMMAND;
+			response.setPayload(&payload, 1);
+			response.setCRC();
+
+			theOutputGateway.sendMessage(response);
+
+			theOutputGateway.logString(error, std::string("Received message with invalid command code"));
+			continue;
+		}
+
+		if (m_commandMap[msg.getCommandCode()](msg))
+		{
+			theOutputGateway.logString(info, std::string("Successfully executed command"));
+		}
 	}
+}
+
+
+
+void MessageHandler::buildCommandMap()
+{
+	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
 }

@@ -76,8 +76,9 @@ bool Message::loadFromBytes(uint8_t message_length, const uint8_t* const raw_mes
 // Dummy CRC calculator, always return 0x6161 = 'aa'
 uint16_t calculateCRC(uint8_t*, uint32_t)
 {
-	// return "ab" as the CRC16
-	return 0x6162;
+	// return "ab" as the CRC16, in little endian format (least significant byte at lowest
+	// memory address
+	return 0x6261;
 }
 #else
 // Calculate CRC16 for the input byte array, set the two byte response

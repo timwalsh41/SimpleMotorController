@@ -9,10 +9,12 @@
 #define INC_MESSAGE_H_
 
 #include "stdint.h"
-#include "CommandInterface.h"
 
 // minimum payload length is 3 bytes (one byte command code plus two byte CRC)
 constexpr uint8_t MINIMUM_MESSAGE_LENGTH = 3;
+
+// bit mask for acknowledge bit in command code
+constexpr uint8_t ACK_BIT_MASK = 0x80;
 
 uint16_t calculateCRC(uint8_t* byteArray, uint32_t length);
 
@@ -30,10 +32,10 @@ public:
 	bool loadFromBytes(uint8_t payload_length, const uint8_t* const raw_message);
 	bool checkCRC() const;
 	void setCRC();
-	uint8_t getCommandCode() { return m_commandCode; }
-	uint32_t getPayloadLength() { return m_payloadLength; }
-	uint8_t* getPayload() { return m_pPayload; }
-	uint16_t getCRC() { return m_crc; };
+	uint8_t getCommandCode() const { return m_commandCode; }
+	uint32_t getPayloadLength() const { return m_payloadLength; }
+	uint8_t* getPayload() const { return m_pPayload; }
+	uint16_t getCRC() const { return m_crc; };
 
 	void setCommandCode(uint8_t commandCode) { m_commandCode = commandCode; }
 	void setAck() { m_commandCode |= ACK_BIT_MASK; }

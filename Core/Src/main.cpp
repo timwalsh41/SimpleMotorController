@@ -21,6 +21,7 @@
 #include "SerialParser.h"
 #include "OutputGateway.h"
 #include "MessageHandler.h"
+#include "Version.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -126,7 +127,17 @@ int main(void)
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
 #ifdef DEBUG
-  theOutputGateway.logString(info, "Hammock motor driver, version x.y.z");
+  uint8_t version[3];
+  Utility::getVersion(version);
+  //theOutputGateway.logString(info, "Hammock motor driver, version " + \
+								  std::to_string(version[0]) + "." + \
+								  std::to_string(version[1]) + "." + \
+								  std::to_string(version[2]));
+  std::string welcomeString = "Welcome to the hammock driver v" + \
+		  	  	  	  	  	  std::to_string(version[0]) + "." + \
+							  std::to_string(version[1]) + "." + \
+							  std::to_string(version[2]);
+  theOutputGateway.logString(info, welcomeString);
 #endif
 
 
