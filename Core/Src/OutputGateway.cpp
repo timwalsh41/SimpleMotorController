@@ -40,6 +40,7 @@ void OutputGateway::transmitString(const std::string& outString)
 	HAL_UART_Transmit_IT(&huart2, (const uint8_t*) outString.c_str(), outString.length());
 
 	// adding a bit of delay here seems to keep the transmitted array from being corrupted
+	// TODO: could try to replace this with a shorter delay e.g. using NOP
 	HAL_Delay(1);
 }
 
@@ -68,6 +69,7 @@ void OutputGateway::transmitMessage(const Message& msg)
 		HAL_UART_Transmit_IT(&huart2, fullMessage, fullMessageLength);
 
 		// adding a bit of delay here seems to keep the transmitted array from being corrupted
+		// TODO: could try to replace this with a shorter delay
 		HAL_Delay(1);
 
 		delete[] fullMessage;

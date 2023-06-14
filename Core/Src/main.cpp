@@ -21,6 +21,7 @@
 #include "SerialParser.h"
 #include "OutputGateway.h"
 #include "MessageHandler.h"
+#include "CurrentSensor.h"
 #include "Version.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -35,7 +36,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-constexpr uint32_t MAIN_LOOP_TIME_MS = 50;
+constexpr uint32_t MAIN_LOOP_TIME_MS = 1;
 constexpr uint32_t LED_BLINK_TIME_MS = 500;
 
 /* USER CODE END PD */
@@ -63,6 +64,7 @@ uint8_t UartRcvBuffer;
 SerialParser theSerialParser;
 OutputGateway theOutputGateway;
 MessageHandler theMessageHandler;
+CurrentSensor theCurrentSensor;
 
 /* USER CODE END PV */
 
@@ -124,15 +126,15 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
+  // start ADC acquisitions
+  HAL_TIM_Base_Start(&htim6);
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CURRENT_SENSOR_BUFFER_SIZE);
+
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
 #ifdef DEBUG
   uint8_t version[3];
   Utility::getVersion(version);
-  //theOutputGateway.logString(info, "Hammock motor driver, version " + \
-								  std::to_string(version[0]) + "." + \
-								  std::to_string(version[1]) + "." + \
-								  std::to_string(version[2]));
   std::string welcomeString = "Welcome to the hammock driver v" + \
 		  	  	  	  	  	  std::to_string(version[0]) + "." + \
 							  std::to_string(version[1]) + "." + \
@@ -159,6 +161,7 @@ int main(void)
 		theSerialParser.ProcessIncomingData();
 		theMessageHandler.processMessages();
 		theOutputGateway.processOutgoingMessages();
+		theCurrentSensor.processCurrentMeasurements();
 
 		mainLoopTimer = HAL_GetTick();
 	}
@@ -670,6 +673,16 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 	theOutputGateway.setReceiving();
+}
+
+// Called when ADC DMA buffer is completely filled
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+  // hand off current sensor buffer
+  theCurrentSensor.swapBuffer();
+
+  // restart the measurement with the new buffer
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CURRENT_SENSOR_BUFFER_SIZE);
 }
 
 /* USER CODE END 4 */

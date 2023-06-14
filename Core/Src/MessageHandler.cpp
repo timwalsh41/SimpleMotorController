@@ -74,9 +74,9 @@ void MessageHandler::processMessages()
 			continue;
 		}
 
-		if (m_commandMap[msg.getCommandCode()](msg))
+		if (!m_commandMap[msg.getCommandCode()](msg))
 		{
-			theOutputGateway.logString(info, std::string("Successfully executed command"));
+			theOutputGateway.logString(error, std::string("Unable to execute command"));
 		}
 	}
 }

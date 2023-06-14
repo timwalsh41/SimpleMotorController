@@ -35,6 +35,7 @@ namespace Utility
 		output.setPayload(version, 3);
 		output.setCRC();
 		theOutputGateway.sendMessage(output);
+		theOutputGateway.logString(info, "Successfully processed version command");
 
 		return true;
 	}
