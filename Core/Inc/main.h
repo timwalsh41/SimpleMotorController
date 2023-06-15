@@ -82,6 +82,9 @@ void Error_Handler(void);
 #define FLT__EXTI_IRQn EXTI9_5_IRQn
 
 /* USER CODE BEGIN Private defines */
+#define setFlag() HAL_GPIO_WritePin(GPIOB, FLAG_Pin, GPIO_PIN_SET)
+#define clearFlag() HAL_GPIO_WritePin(GPIOB, FLAG_Pin, GPIO_PIN_RESET)
+#define toggleFlag() HAL_GPIO_TogglePin(GPIOB, FLAG_Pin)
 
 /* USER CODE END Private defines */
 

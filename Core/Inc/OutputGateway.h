@@ -22,30 +22,33 @@ enum LogLevel {
 	fatal
 };
 
-class OutputGateway
+namespace MessageHandling
 {
-public:
-	OutputGateway();
-	~OutputGateway();
-	OutputGateway(const OutputGateway&) = delete;
 
-	void logString(LogLevel level, const std::string& msg);
-	void sendMessage(const Message& msg);
-	void processOutgoingMessages();
-	void setReceiving() { m_receiving = true; }
-	void setTransmitting() { m_receiving = false; }
+	class OutputGateway
+	{
+	public:
+		OutputGateway();
+		~OutputGateway();
+		OutputGateway(const OutputGateway&) = delete;
 
-private:
-	void transmitString(const std::string& outString);
-	void transmitMessage(const Message& outMessage);
-	void addStartStopSequence(const uint8_t* inputArray, uint32_t inputLength, uint8_t** outputArray, uint32_t& outputLength) const;
+		void logString(LogLevel level, const std::string& msg);
+		void sendMessage(const Message& msg);
+		void processOutgoingMessages();
+		void setReceiving() { m_receiving = true; }
+		void setTransmitting() { m_receiving = false; }
 
-	bool m_receiving = true;
-	static constexpr std::string_view logLevelString[] = {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"};
-	std::queue<std::string> m_logStringQueue;
-	std::queue<Message> m_messageQueue;
-};
+	private:
+		void transmitString(const std::string& outString);
+		void transmitMessage(const Message& outMessage);
+		void addStartStopSequence(const uint8_t* inputArray, uint32_t inputLength, uint8_t** outputArray, uint32_t& outputLength) const;
 
+		bool m_receiving = true;
+		static constexpr std::string_view logLevelString[] = {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"};
+		std::queue<std::string> m_logStringQueue;
+		std::queue<Message> m_messageQueue;
+	};
 
+} /* namespace MessageHandling */
 
 #endif /* INC_OUTPUTGATEWAY_H_ */

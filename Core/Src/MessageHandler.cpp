@@ -10,7 +10,10 @@
 #include "OutputGateway.h"
 #include "Version.h"
 
-extern OutputGateway theOutputGateway;
+extern MessageHandling::OutputGateway theOutputGateway;
+
+namespace MessageHandling
+{
 
 MessageHandler::MessageHandler()
 {
@@ -81,9 +84,9 @@ void MessageHandler::processMessages()
 	}
 }
 
-
-
 void MessageHandler::buildCommandMap()
 {
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
 }
+
+} /* namespace MessageHandling */

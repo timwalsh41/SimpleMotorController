@@ -13,20 +13,24 @@
 #include <functional>
 #include "Message.h"
 
-class MessageHandler {
-public:
-	MessageHandler();
-	virtual ~MessageHandler();
+namespace MessageHandling
+{
 
-	void loadIncomingMessage(Message& msg);
-	void processMessages();
+	class MessageHandler {
+	public:
+		MessageHandler();
+		virtual ~MessageHandler();
 
-private:
-	bool parseMessage(const Message& input);
-	void buildCommandMap();
+		void loadIncomingMessage(Message& msg);
+		void processMessages();
 
-	std::queue<Message> m_messageQueue;
-	std::unordered_map<uint8_t, std::function<bool(const Message&)>> m_commandMap;
-};
+	private:
+		bool parseMessage(const Message& input);
+		void buildCommandMap();
 
+		std::queue<Message> m_messageQueue;
+		std::unordered_map<uint8_t, std::function<bool(const Message&)>> m_commandMap;
+	};
+
+} /* namespace MessageHandling */
 #endif /* INC_MESSAGEHANDLER_H_ */

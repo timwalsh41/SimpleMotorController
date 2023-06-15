@@ -23,6 +23,7 @@
 #include "MessageHandler.h"
 #include "CurrentSensor.h"
 #include "Version.h"
+#include "Utility.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -31,6 +32,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+using MessageHandling::MessageHandler;
+using MessageHandling::SerialParser;
+using MessageHandling::OutputGateway;
 
 /* USER CODE END PTD */
 
@@ -64,7 +69,7 @@ uint8_t UartRcvBuffer;
 SerialParser theSerialParser;
 OutputGateway theOutputGateway;
 MessageHandler theMessageHandler;
-CurrentSensor theCurrentSensor;
+CurrentSensor::CurrentSensor theCurrentSensor;
 
 /* USER CODE END PV */
 
@@ -128,7 +133,7 @@ int main(void)
 
   // start ADC acquisitions
   HAL_TIM_Base_Start(&htim6);
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CurrentSensor::CURRENT_SENSOR_BUFFER_SIZE);
 
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
@@ -164,6 +169,10 @@ int main(void)
 		theCurrentSensor.processCurrentMeasurements();
 
 		mainLoopTimer = HAL_GetTick();
+
+		setFlag();
+		Utility::delayCycles(1000);
+		clearFlag();
 	}
 
 	if ((HAL_GetTick() - ledTimer) >= LED_BLINK_TIME_MS)
@@ -682,7 +691,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   theCurrentSensor.swapBuffer();
 
   // restart the measurement with the new buffer
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CurrentSensor::CURRENT_SENSOR_BUFFER_SIZE);
 }
 
 /* USER CODE END 4 */

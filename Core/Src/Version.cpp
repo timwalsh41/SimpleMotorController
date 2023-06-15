@@ -8,14 +8,14 @@
 #include "Version.h"
 #include "OutputGateway.h"
 
-extern OutputGateway theOutputGateway;
+extern MessageHandling::OutputGateway theOutputGateway;
 
 namespace Utility
 {
 
-	bool sendVersionMessage(const Message& msg)
+	bool sendVersionMessage(const MessageHandling::Message& msg)
 	{
-		Message output;
+		MessageHandling::Message output;
 		output.setCommandCode(msg.getCommandCode());
 		output.setAck();
 
