@@ -8,11 +8,11 @@
 #include "stm32l4xx_hal.h"
 #include "SerialParser.h"
 #include "Message.h"
-#include "OutputGateway.h"
 #include "MessageHandler.h"
+#include "Logger.h"
 
-extern MessageHandling::OutputGateway theOutputGateway;
 extern MessageHandling::MessageHandler theMessageHandler;
+extern Logging::Logger theLogger;
 
 namespace MessageHandling
 {
@@ -46,7 +46,7 @@ namespace MessageHandling
 			m_incomingBuffer[m_incomingBufferPtr++] = new_char;
 		else
 		{
-			theOutputGateway.logString(error, "Input serial buffer overflow, discarding buffer");
+			theLogger.logString(error, "Input serial buffer overflow, discarding buffer");
 			m_incomingBufferPtr = 0;
 		}
 	}
@@ -64,7 +64,7 @@ namespace MessageHandling
 				m_lastCharReceivedTime = HAL_GetTick();
 			else if ((HAL_GetTick() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
 			{
-				theOutputGateway.logString(warning, "Serial packet timed out before completion, discarding");
+				theLogger.logString(warning, "Serial packet timed out before completion, discarding");
 				m_state = IDLE;
 			}
 		}
@@ -77,7 +77,7 @@ namespace MessageHandling
 			// the push_back method
 			logString = "Received new character ";
 			logString.push_back(new_char);
-			theOutputGateway.logString(debug, logString);
+			theLogger.logString(debug, logString);
 
 			switch(m_state)
 			{
@@ -94,7 +94,7 @@ namespace MessageHandling
 					if (sequenceMatch(START_SEQUENCE, (const char*) m_startSequenceCandidate, START_SEQUENCE_LENGTH))
 					{
 						// we have matched the start sequence, move to RECEIVING state
-						theOutputGateway.logString(debug, std::string("Received start sequence"));
+						theLogger.logString(debug, std::string("Received start sequence"));
 						m_state = RECEIVING;
 						m_startSequenceCandidateLength = 0;
 					}
@@ -124,7 +124,7 @@ namespace MessageHandling
 						msg.loadFromBytes(m_candidateMessageLength - STOP_SEQUENCE_LENGTH, m_candidateMessage);
 						theMessageHandler.loadIncomingMessage(msg);
 
-						theOutputGateway.logString(debug, std::string("Received stop sequence, processing message"));
+						theLogger.logString(debug, std::string("Received stop sequence, processing message"));
 
 						// we are finished receiving the current message so return to IDLE
 						m_state = IDLE;
@@ -139,13 +139,13 @@ namespace MessageHandling
 					m_state = IDLE;
 					m_candidateMessageLength = 0;
 
-					theOutputGateway.logString(error, "Incoming message overflow");
+					theLogger.logString(error, "Incoming message overflow");
 				}
 
 				break;
 
 			default:
-				theOutputGateway.logString(error, "SerialParser in invalid state, resetting to idle");
+				theLogger.logString(error, "SerialParser in invalid state, resetting to idle");
 				m_state = IDLE;
 				m_candidateMessageLength = 0;
 				break;

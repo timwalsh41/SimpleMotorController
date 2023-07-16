@@ -7,9 +7,9 @@
 
 #include <cstring>
 #include "Message.h"
-#include "OutputGateway.h"
+#include "Logger.h"
 
-extern MessageHandling::OutputGateway theOutputGateway;
+extern Logging::Logger theLogger;
 
 namespace MessageHandling
 {
@@ -36,7 +36,7 @@ namespace MessageHandling
 			m_payloadLength{other.m_payloadLength},
 			m_crc{other.m_crc}
 	{
-		// theOutputGateway.logString(debug, "Move construction of Message");
+		// theLogger.logString(debug, "Move construction of Message");
 
 		if (m_payloadLength)
 		{
@@ -56,7 +56,7 @@ namespace MessageHandling
 	{
 		if (message_length < MINIMUM_MESSAGE_LENGTH)
 		{
-			theOutputGateway.logString(warning, "Received message less than the minimum length");
+			theLogger.logString(warning, "Received message less than the minimum length");
 			return false;
 		}
 
@@ -177,7 +177,7 @@ namespace MessageHandling
 		if (m_pPayload != nullptr)
 				delete[] m_pPayload;
 
-		// theOutputGateway.logString(debug, std::string("Move assignment of Message"));
+		// theLogger.logString(debug, std::string("Move assignment of Message"));
 
 		m_commandCode = other.m_commandCode;
 		m_payloadLength = other.m_payloadLength;
@@ -202,7 +202,7 @@ namespace MessageHandling
 	{
 		if (!checkCRC())
 		{
-			theOutputGateway.logString(error, "Unable to serialize message, CRC mismatch");
+			theLogger.logString(error, "Unable to serialize message, CRC mismatch");
 			return false;
 		}
 
@@ -213,7 +213,7 @@ namespace MessageHandling
 
 		if (message == nullptr)
 		{
-			theOutputGateway.logString(error, "Unable to serialize message, cannot allocate memory for byte array");
+			theLogger.logString(error, "Unable to serialize message, cannot allocate memory for byte array");
 			return false;
 		}
 

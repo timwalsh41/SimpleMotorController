@@ -8,9 +8,11 @@
 #include "MessageHandler.h"
 #include "CommandInterface.h"
 #include "OutputGateway.h"
+#include "Logger.h"
 #include "Version.h"
 
 extern MessageHandling::OutputGateway theOutputGateway;
+extern Logging::Logger theLogger;
 
 namespace MessageHandling
 {
@@ -53,7 +55,7 @@ void MessageHandler::processMessages()
 
 			theOutputGateway.sendMessage(response);
 
-			theOutputGateway.logString(error, std::string("Received message with bad CRC"));
+			theLogger.logString(error, std::string("Received message with bad CRC"));
 			continue;
 		}
 
@@ -73,13 +75,13 @@ void MessageHandler::processMessages()
 
 			theOutputGateway.sendMessage(response);
 
-			theOutputGateway.logString(error, std::string("Received message with invalid command code"));
+			theLogger.logString(error, std::string("Received message with invalid command code"));
 			continue;
 		}
 
 		if (!m_commandMap[msg.getCommandCode()](msg))
 		{
-			theOutputGateway.logString(error, std::string("Unable to execute command"));
+			theLogger.logString(error, std::string("Unable to execute command"));
 		}
 	}
 }

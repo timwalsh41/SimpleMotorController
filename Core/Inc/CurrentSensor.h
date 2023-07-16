@@ -10,7 +10,7 @@
 
 #include "stdint.h"
 
-namespace CurrentSensor
+namespace Sensors
 {
 
 	// number of high-speed ADC samples to take at each measurement time point
@@ -32,6 +32,9 @@ namespace CurrentSensor
 	constexpr uint32_t CURRENT_SENSOR_STORAGE_LENGTH = CURRENT_SENSOR_MEASUREMENTS_PER_TICK * \
 					   CURRENT_SENSOR_STORAGE_LENGTH_TICKS;
 
+	// default zero offset for current sensor reading
+	constexpr uint32_t CURRENT_SENSOR_ZERO_OFFSET = 2048;
+
 	// conversion factor from ADC number to mA
 	// TODO: Set conversion factor
 	constexpr float ADC_TO_MA = 1;
@@ -48,6 +51,8 @@ namespace CurrentSensor
 
 		bool getStorageBuffer(uint16_t* outputBuffer, uint32_t& numSamples);
 
+		void zeroCurrentSensor();
+
 	private:
 		// Ping pong buffers for storing ADC readings and processing them in main loop
 		uint32_t m_pBufferA[CURRENT_SENSOR_BUFFER_SIZE];
@@ -63,6 +68,9 @@ namespace CurrentSensor
 
 		// flag for when a buffer is full and ready to be processed
 		bool m_bBufferReady{false};
+
+		// zero offset, in ADC counts
+		uint32_t m_zeroCurrentOffset{CURRENT_SENSOR_ZERO_OFFSET};
 	};
 
 } /* namespace CurrentSensor */

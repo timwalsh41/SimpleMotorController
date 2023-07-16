@@ -7,8 +7,10 @@
 
 #include "Version.h"
 #include "OutputGateway.h"
+#include "Logger.h"
 
 extern MessageHandling::OutputGateway theOutputGateway;
+extern Logging::Logger theLogger;
 
 namespace Utility
 {
@@ -27,7 +29,7 @@ namespace Utility
 			output.setCRC();
 			theOutputGateway.sendMessage(output);
 
-			theOutputGateway.logString(error, std::string("Invalid payload in get version command"));
+			theLogger.logString(error, std::string("Invalid payload in get version command"));
 			return false;
 		}
 
@@ -35,7 +37,7 @@ namespace Utility
 		output.setPayload(version, 3);
 		output.setCRC();
 		theOutputGateway.sendMessage(output);
-		theOutputGateway.logString(info, "Successfully processed version command");
+		theLogger.logString(info, "Successfully processed version command");
 
 		return true;
 	}

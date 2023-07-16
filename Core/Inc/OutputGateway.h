@@ -13,14 +13,7 @@
 #include <string_view>
 #include "Message.h"
 #include "CommandInterface.h"
-
-enum LogLevel {
-	debug = 0,
-	info,
-	warning,
-	error,
-	fatal
-};
+#include "Logger.h"
 
 namespace MessageHandling
 {

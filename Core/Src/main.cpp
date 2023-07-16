@@ -22,6 +22,7 @@
 #include "OutputGateway.h"
 #include "MessageHandler.h"
 #include "CurrentSensor.h"
+#include "Controller.h"
 #include "Version.h"
 #include "Utility.h"
 
@@ -36,6 +37,9 @@
 using MessageHandling::MessageHandler;
 using MessageHandling::SerialParser;
 using MessageHandling::OutputGateway;
+using Sensors::CurrentSensor;
+using MotorControl::Controller;
+using Logging::Logger;
 
 /* USER CODE END PTD */
 
@@ -69,7 +73,9 @@ uint8_t UartRcvBuffer;
 SerialParser theSerialParser;
 OutputGateway theOutputGateway;
 MessageHandler theMessageHandler;
-CurrentSensor::CurrentSensor theCurrentSensor;
+CurrentSensor theCurrentSensor;
+Controller theController;
+Logger theLogger;
 
 /* USER CODE END PV */
 
@@ -133,7 +139,7 @@ int main(void)
 
   // start ADC acquisitions
   HAL_TIM_Base_Start(&htim6);
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CurrentSensor::CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
@@ -691,7 +697,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   theCurrentSensor.swapBuffer();
 
   // restart the measurement with the new buffer
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), CurrentSensor::CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 }
 
 /* USER CODE END 4 */

@@ -8,7 +8,7 @@
 #include "CurrentSensor.h"
 #include <algorithm>
 
-namespace CurrentSensor
+namespace Sensors
 {
 
 	CurrentSensor::CurrentSensor() {
@@ -42,7 +42,8 @@ namespace CurrentSensor
 				for (uint32_t j = 0; j < CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT; j++)
 					sum += pBuffer[i+j];
 
-				m_pStorageBuffer[m_storageBufferPtr++] = sum / CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT * ADC_TO_MA;
+				m_pStorageBuffer[m_storageBufferPtr++] = (sum / CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT - CURRENT_SENSOR_ZERO_OFFSET) *
+														 ADC_TO_MA;
 				if (m_storageBufferPtr == CURRENT_SENSOR_STORAGE_LENGTH)
 					m_storageBufferPtr = 0;
 			}
@@ -97,6 +98,14 @@ namespace CurrentSensor
 
 		// we shouldn't ever return from here, so this indicates something has gone wrong
 		return false;
+	}
+
+
+	void zeroCurrentSensor()
+	{
+		// TODO: figure out how to zero current sensor
+		// could use an average of recent points
+		assert(false);
 	}
 
 } /* namespace CurrentSensor */
