@@ -26,6 +26,7 @@
 #include "MessageHandler.h"
 #include "CurrentSensor.h"
 #include "Controller.h"
+#include "MotorCommandHandler.h"
 #include "Version.h"
 #include "Utility.h"
 /* USER CODE END Includes */
@@ -38,6 +39,7 @@ using MessageHandling::SerialParser;
 using MessageHandling::OutputGateway;
 using Sensors::CurrentSensor;
 using MotorControl::Controller;
+using MotorControl::MotorCommandHandler;
 using Logging::Logger;
 
 /* USER CODE END PTD */
@@ -74,6 +76,7 @@ OutputGateway theOutputGateway;
 MessageHandler theMessageHandler;
 CurrentSensor theCurrentSensor;
 Controller theController;
+MotorCommandHandler theMotorCommandHandler(&theController);
 Logger theLogger;
 
 /* USER CODE END PV */

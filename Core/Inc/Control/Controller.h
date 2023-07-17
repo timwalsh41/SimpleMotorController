@@ -26,8 +26,8 @@ namespace MotorControl
 
 		void enableMotor();
 		void disableMotor();
-		void sleepMotor();
-		void wakeMotor();
+		void sleepDriver();
+		void wakeDriver();
 
 		void sendCommand(bool forwardDirection, uint16_t dutyCycle, uint16_t rampTimeMs);
 		void idleMotor();
@@ -43,7 +43,7 @@ namespace MotorControl
 		bool isDriverSleeping() const { return m_motorDriver.isDriverSleeping(); }
 		bool isDriverFaulted() const { return m_motorDriver.isDriverFaulted(); }
 
-		float getSpeed() const { return m_bufferedMotorSpeed; }
+		float getMotorSpeed() const { return m_bufferedMotorSpeed; }
 
 	private:
 		void updateState(MotorControlState*);

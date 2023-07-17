@@ -83,13 +83,13 @@ namespace MotorControl
 		updateState(nextState);
 	}
 
-	void Controller::sleepMotor()
+	void Controller::sleepDriver()
 	{
 		MotorControlState* nextState = m_state->handleEvent(MotorEvent{SLEEP, nullptr});
 		updateState(nextState);
 	}
 
-	void Controller::wakeMotor()
+	void Controller::wakeDriver()
 	{
 		MotorControlState* nextState = m_state->handleEvent(MotorEvent{WAKE, nullptr});
 		updateState(nextState);

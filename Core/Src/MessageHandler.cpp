@@ -8,9 +8,11 @@
 #include "MessageHandler.h"
 #include "CommandInterface.h"
 #include "OutputGateway.h"
+#include "MotorCommandHandler.h"
 #include "Logger.h"
 #include "Version.h"
 
+extern MotorControl::MotorCommandHandler theMotorCommandHandler;
 extern MessageHandling::OutputGateway theOutputGateway;
 extern Logging::Logger theLogger;
 
@@ -98,9 +100,36 @@ void MessageHandler::processMessages()
 	}
 }
 
+// TODO: I INSERTED CMD_GET_MOTOR_SPEED AT 0x42 ON PLANE WITHOUT INTERNET, NEED TO UPDATE COMMAND MAP ON ONENOTE
+
 void MessageHandler::buildCommandMap()
 {
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
+	// TODO: what the hell does the lambda capture actually do??
+	m_commandMap[CMD_ENABLE_MOTOR] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.enableMotor(msg, payload, payloadLength);
+			};
+	m_commandMap[CMD_DISABLE_MOTOR] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.disableMotor(msg, payload, payloadLength);
+			};
+	m_commandMap[CMD_SLEEP_DRIVER] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.sleepDriver(msg, payload, payloadLength);
+			};
+	m_commandMap[CMD_WAKE_DRIVER] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.wakeDriver(msg, payload, payloadLength);
+			};
+	m_commandMap[CMD_GET_MOTOR_POS] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.getMotorPosition(msg, payload, payloadLength);
+			};
+	m_commandMap[CMD_GET_MOTOR_SPEED] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+			{
+				return theMotorCommandHandler.getMotorSpeed(msg, payload, payloadLength);
+			};
 }
 
 } /* namespace MessageHandling */
