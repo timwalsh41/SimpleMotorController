@@ -17,13 +17,8 @@ namespace MotorControl
 	Controller::Controller() :
 		m_lastEncoderCount(m_motorDriver.getEncoderCounts())
 	{
-		// TODO Auto-generated constructor stub
 		m_state = new MotorControlStates::Disabled(&m_motorDriver);
 		std::memset(m_pMotorSpeedBuffer, 0, sizeof(float)*VELOCITY_BUFFER_SIZE);
-	}
-
-	Controller::~Controller() {
-		// TODO Auto-generated destructor stub
 	}
 
 	void Controller::tick()

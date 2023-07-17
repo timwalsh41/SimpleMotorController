@@ -29,7 +29,7 @@ namespace MessageHandling
 		void buildCommandMap();
 
 		std::queue<Message> m_messageQueue;
-		std::unordered_map<uint8_t, std::function<bool(const Message&)>> m_commandMap;
+		std::unordered_map<uint8_t, std::function<bool(const Message&, uint8_t*, uint8_t&)>> m_commandMap;
 	};
 
 } /* namespace MessageHandling */

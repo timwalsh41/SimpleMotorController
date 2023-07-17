@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -18,6 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "SerialParser.h"
 #include "OutputGateway.h"
 #include "MessageHandler.h"
@@ -25,10 +28,6 @@
 #include "Controller.h"
 #include "Version.h"
 #include "Utility.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -698,6 +697,14 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
   // restart the measurement with the new buffer
   HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	// TODO: test that this actually works
+	if (GPIO_Pin == FLT__Pin)
+		if (HAL_GPIO_ReadPin(FLT__GPIO_Port, FLT__Pin) == GPIO_PIN_RESET)
+			theController.motorFault();
 }
 
 /* USER CODE END 4 */

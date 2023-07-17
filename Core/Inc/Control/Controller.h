@@ -9,7 +9,7 @@
 #define SRC_CONTROLLER_H_
 
 #include <MotorControlState.h>
-#include "MotorDriver.h"
+#include <PololuG2MotorDriver.h>
 
 namespace MotorControl
 {
@@ -18,7 +18,6 @@ namespace MotorControl
 	class Controller {
 	public:
 		Controller();
-		~Controller();
 
 		void tick();
 		void updateSpeed();
@@ -49,7 +48,7 @@ namespace MotorControl
 	private:
 		void updateState(MotorControlState*);
 
-		MotorDriver m_motorDriver;
+		PololuG2MotorDriver m_motorDriver;
 		MotorControlState *m_state{nullptr};
 
 		// motor speed is measured in units of encoder counts per tick

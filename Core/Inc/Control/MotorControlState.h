@@ -6,23 +6,19 @@
  *
  * Contains implementation for the following motor controller states:
  * - DISABLED:			The motor driver is disabled
- * - SLEEP:				The motor driver is asleep
+ * - SLEEPING:			The motor driver is asleep
  * - FAULT:				The motor driver has reported a fault and is disabled
  * - IDLE: 				The motor driver is enabled but the motor is idle
- * - FORWARD:			The motor is currently running at a constant duty cycle in the forward direction
- * - REVERSE:			The motor is currently running at a constant duty cycle in the reverse direction
- * - RAMPUPFORWARD: 	The motor is ramping to a steady state forward duty cycle
- * - RAMPDOWNFORWARD:	The motor is ramping from a steady state forward duty cycle to zero (idle)
- * - RAMPUPREVERSE:		The motor is ramping to a steady state reverse duty cycle
- * - RAMPDOWNREVERSE:	The motor is ramping from a steady state reverse duty cycle to zero (idle)
+ * - RUNNING:			The motor is currently running at a constant duty cycle
+ * - RAMP:				The motor is ramping between steady state duty cycle settings
  *
  */
 
 #ifndef SRC_CONTROL_MOTORCONTROLSTATE_H_
 #define SRC_CONTROL_MOTORCONTROLSTATE_H_
 
+#include <PololuG2MotorDriver.h>
 #include "stm32l4xx_hal.h"
-#include "MotorDriver.h"
 #include <string>
 
 namespace MotorControl
@@ -66,7 +62,7 @@ namespace MotorControl
 
 	class MotorControlState {
 	public:
-		MotorControlState(MotorDriver*);
+		MotorControlState(PololuG2MotorDriver*);
 		virtual ~MotorControlState();
 
 		virtual MotorControlState* handleEvent(MotorEvent) = 0;
@@ -79,7 +75,7 @@ namespace MotorControl
 		std::string m_stateName{"undefined"};
 
 	protected:
-		MotorDriver* m_pMotorDriver;
+		PololuG2MotorDriver* m_pMotorDriver;
 		MotorStateIdCode m_stateId{UNSET};
 		uint32_t m_stateEntryTime{0};
 	};
@@ -89,35 +85,35 @@ namespace MotorControl
 		class Disabled : public MotorControlState
 		{
 		public:
-			Disabled(MotorDriver*);
+			Disabled(PololuG2MotorDriver*);
 			MotorControlState* handleEvent(MotorEvent) override;
 		};
 
 		class Idle : public MotorControlState
 		{
 		public:
-			Idle(MotorDriver*);
+			Idle(PololuG2MotorDriver*);
 			MotorControlState* handleEvent(MotorEvent) override;
 		};
 
 		class Fault : public MotorControlState
 		{
 		public:
-			Fault(MotorDriver*);
+			Fault(PololuG2MotorDriver*);
 			MotorControlState* handleEvent(MotorEvent) override;
 		};
 
 		class Sleeping : public MotorControlState
 		{
 		public:
-			Sleeping(MotorDriver*);
+			Sleeping(PololuG2MotorDriver*);
 			MotorControlState* handleEvent(MotorEvent) override;
 		};
 
 		class Ramp : public MotorControlState
 		{
 		public:
-			Ramp(MotorDriver*, MotorCommand*);
+			Ramp(PololuG2MotorDriver*, MotorCommand*);
 			~Ramp();
 			MotorControlState* handleEvent(MotorEvent) override;
 		private:
@@ -129,7 +125,7 @@ namespace MotorControl
 		class Running : public MotorControlState
 		{
 		public:
-			Running(MotorDriver*);
+			Running(PololuG2MotorDriver*);
 			MotorControlState* handleEvent(MotorEvent) override;
 		};
 	} // namespace MotorControlStates

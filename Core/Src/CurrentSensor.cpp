@@ -25,10 +25,6 @@ namespace Sensors
 		m_pCurrentBuffer = m_pBufferA;
 	}
 
-	CurrentSensor::~CurrentSensor() {
-		// TODO Auto-generated destructor stub
-	}
-
 	// Process raw current measurements into averaged values and enter into storage buffer
 	void CurrentSensor::processCurrentMeasurements()
 	{

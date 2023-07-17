@@ -1,5 +1,5 @@
 /*
- * MotorDriver.h
+ * PololuG2MotorDriver.h
  *
  *  Created on: Jun 2, 2023
  *      Author: tim
@@ -27,10 +27,9 @@ namespace MotorControl
 
 	constexpr uint16_t DEFAULT_RAMP_TIME_MS = 250;
 
-	class MotorDriver {
+	class PololuG2MotorDriver {
 	public:
-		MotorDriver();
-		~MotorDriver();
+		PololuG2MotorDriver();
 
 		void update();
 

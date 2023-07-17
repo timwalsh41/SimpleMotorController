@@ -16,7 +16,7 @@ namespace Utility
 	constexpr uint8_t MINOR_VERSION = 0;
 	constexpr uint8_t BUILD = 1;
 
-	bool sendVersionMessage(const MessageHandling::Message&);
+	bool sendVersionMessage(const MessageHandling::Message&, uint8_t*, uint8_t&);
 	void getVersion(uint8_t* version);
 } // namespace Utility
 #endif /* INC_VERSION_H_ */

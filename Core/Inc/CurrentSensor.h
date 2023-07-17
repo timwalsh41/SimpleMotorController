@@ -42,7 +42,6 @@ namespace Sensors
 	class CurrentSensor {
 	public:
 		CurrentSensor();
-		virtual ~CurrentSensor();
 
 		void processCurrentMeasurements();
 		void swapBuffer();

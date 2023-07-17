@@ -1,54 +1,47 @@
 /*
- * MotorDriver.cpp
+ * PololuG2MotorDriver.cpp
  *
  *  Created on: Jun 2, 2023
  *      Author: tim
  */
 
+#include <PololuG2MotorDriver.h>
 #include "main.h"
-#include "MotorDriver.h"
 #include <algorithm>
-
-// TODO: Handle FLT signal
 
 namespace MotorControl
 {
 
-	MotorDriver::MotorDriver() {
-		// TODO Auto-generated constructor stub
+	PololuG2MotorDriver::PololuG2MotorDriver() {
 		zeroEncoder();
 	}
 
-	MotorDriver::~MotorDriver() {
-		// TODO Auto-generated destructor stub
-	}
-
 	// update routine to run at regular intervals by parent object
-	void MotorDriver::update()
+	void PololuG2MotorDriver::update()
 	{
 		updateEncoder();
 		updateMotorDrive();
 	}
 
-	void MotorDriver::setPwmDutyCycle(int32_t dutyCycle)
+	void PololuG2MotorDriver::setPwmDutyCycle(int32_t dutyCycle)
 	{
 		m_dutyCycle = std::clamp(dutyCycle, static_cast<int32_t>(0), m_maxDutyCycle);
 	}
 
-	void MotorDriver::updateEncoder()
+	void PololuG2MotorDriver::updateEncoder()
 	{
 		m_encoderCount = static_cast<int32_t>(TIM1->CNT) - ENCODER_ZERO_COUNT;
 	}
 
 	// reset the encoder to the mid-scale zero value
-	void MotorDriver::zeroEncoder()
+	void PololuG2MotorDriver::zeroEncoder()
 	{
 		// initialize the encoder counter to this offset value to avoid rolling this over
 		TIM1->CNT = static_cast<uint32_t>(ENCODER_ZERO_COUNT);
 	}
 
 	// write drive configuratino out to motor driver
-	void MotorDriver::updateMotorDrive()
+	void PololuG2MotorDriver::updateMotorDrive()
 	{
 		if (m_isSleeping)
 		{
@@ -79,13 +72,13 @@ namespace MotorControl
 		}
 	}
 
-	bool MotorDriver::isDriverFaulted() const
+	bool PololuG2MotorDriver::isDriverFaulted() const
 	{
 		return HAL_GPIO_ReadPin(FLT__GPIO_Port, FLT__Pin) == GPIO_PIN_RESET ? true : false;
 	}
 
 	// return the encoder position in rotations of the output shaft from the zero position
-	float MotorDriver::getShaftRotationCount() const
+	float PololuG2MotorDriver::getShaftRotationCount() const
 	{
 		return static_cast<float>(m_encoderCount)/ENCODER_PULSES_PER_SHAFT_REVOLUTION;
 	}

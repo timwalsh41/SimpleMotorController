@@ -14,16 +14,15 @@ extern Logging::Logger theLogger;
 namespace MotorControl
 {
 
-	MotorControlState::MotorControlState(MotorDriver* p_motorDriver) :
+	MotorControlState::MotorControlState(PololuG2MotorDriver* p_motorDriver) :
 			m_pMotorDriver{p_motorDriver}
 	{
-		// TODO Auto-generated constructor stub
 		m_stateEntryTime = HAL_GetTick();
 	}
 
 	MotorControlState::~MotorControlState()
 	{
-		// TODO Auto-generated destructor stub
+
 	}
 
 	// return time, in system ticks, motor controller entered
@@ -47,7 +46,7 @@ namespace MotorControl
 		// ***** DISABLED STATE ******
 		// ***************************
 
-		Disabled::Disabled(MotorDriver* pMotorDriver) :
+		Disabled::Disabled(PololuG2MotorDriver* pMotorDriver) :
 				MotorControlState(pMotorDriver)
 		{
 			m_pMotorDriver->wakeMotor();
@@ -59,12 +58,17 @@ namespace MotorControl
 
 		MotorControlState* Disabled::handleEvent(MotorEvent event)
 		{
+			// we don't process motor commands in this state, so if one is received just free it
+			if (event.cmd)
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case TICK:
 				case DISABLE_MOTOR:
 				case WAKE:
 				case CLEAR_FAULT:
+				case MOTOR_COMMAND:
 					// do nothing
 					return this;
 
@@ -80,12 +84,6 @@ namespace MotorControl
 					// enter sleep state, where motor will be disabled and driver put in sleep mode
 					return new Sleeping(m_pMotorDriver);
 
-				case MOTOR_COMMAND:
-					// we are required to delete the command object if one is provided
-					if (event.cmd)
-						delete event.cmd;
-					return this;
-
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller DISABLED state");
 					return this;
@@ -96,7 +94,7 @@ namespace MotorControl
 		// ******* IDLE STATE ********
 		// ***************************
 
-		Idle::Idle(MotorDriver* pMotorDriver) :
+		Idle::Idle(PololuG2MotorDriver* pMotorDriver) :
 				MotorControlState(pMotorDriver)
 		{
 			m_pMotorDriver->enableMotor();
@@ -107,6 +105,10 @@ namespace MotorControl
 
 		MotorControlState* Idle::handleEvent(MotorEvent event)
 		{
+			if (event.eventType != MOTOR_COMMAND && event.cmd)
+				// unexpected command, free it
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case TICK:
@@ -147,7 +149,7 @@ namespace MotorControl
 		// ****** FAULT STATE ********
 		// ***************************
 
-		Fault::Fault(MotorDriver* pMotorDriver) :
+		Fault::Fault(PololuG2MotorDriver* pMotorDriver) :
 				MotorControlState(pMotorDriver)
 		{
 			m_pMotorDriver->disableMotor();
@@ -158,6 +160,10 @@ namespace MotorControl
 
 		MotorControlState* Fault::handleEvent(MotorEvent event)
 		{
+			// we don't process motor commands in this state, so if one is received just free it
+			if (event.cmd)
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case TICK:
@@ -191,7 +197,7 @@ namespace MotorControl
 		// ****** SLEEPING STATE ********
 		// ***************************
 
-		Sleeping::Sleeping(MotorDriver* pMotorDriver) :
+		Sleeping::Sleeping(PololuG2MotorDriver* pMotorDriver) :
 				MotorControlState(pMotorDriver)
 		{
 			m_pMotorDriver->sleepMotor();
@@ -202,6 +208,10 @@ namespace MotorControl
 
 		MotorControlState* Sleeping::handleEvent(MotorEvent event)
 		{
+			// we don't process motor commands in this state, so if one is received just free it
+			if (event.cmd)
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case TICK:
@@ -223,7 +233,6 @@ namespace MotorControl
 					return new Fault(m_pMotorDriver);
 
 				case WAKE:
-					// TODO: handle this event
 					theLogger.logString(info, "Received wake event, waking motor driver");
 					return new Disabled(m_pMotorDriver);
 
@@ -237,9 +246,7 @@ namespace MotorControl
 		// ******** RAMP STATE *******
 		// ***************************
 
-		// TODO: RESUME HERE - CHECK OUT STATE LOGIC FOR ALL STATES/EVENTS
-
-		Ramp::Ramp(MotorDriver* pMotorDriver, MotorCommand* pMotorCommand) :
+		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, MotorCommand* pMotorCommand) :
 				MotorControlState(pMotorDriver),
 				m_pMotorCommand{pMotorCommand}
 		{
@@ -307,6 +314,10 @@ namespace MotorControl
 
 		MotorControlState* Ramp::handleEvent(MotorEvent event)
 		{
+			// we don't process motor commands in this state, so if one is received just free it
+			if (event.cmd)
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case ENABLE_MOTOR:
@@ -372,10 +383,6 @@ namespace MotorControl
 					// We don't process new commands while ramping
 					theLogger.logString(warning, "Ignoring new motor command received while ramping");
 
-					// we are required to delete the command object if one is provided
-					if (event.cmd)
-						delete event.cmd;
-
 					return this;
 
 				case DISABLE_MOTOR:
@@ -394,7 +401,7 @@ namespace MotorControl
 		// ****** RUNNING STATE ******
 		// ***************************
 
-		Running::Running(MotorDriver* pMotorDriver) :
+		Running::Running(PololuG2MotorDriver* pMotorDriver) :
 				MotorControlState(pMotorDriver)
 		{
 			std::stringstream logStringStream;
@@ -408,6 +415,10 @@ namespace MotorControl
 
 		MotorControlState* Running::handleEvent(MotorEvent event)
 		{
+			if (event.eventType != MOTOR_COMMAND && event.cmd)
+				// unexpected command, free it
+				delete event.cmd;
+
 			switch (event.eventType)
 			{
 				case TICK:
