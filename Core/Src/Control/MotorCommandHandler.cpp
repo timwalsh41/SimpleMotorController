@@ -6,6 +6,7 @@
  */
 
 #include "MotorCommandHandler.h"
+#include <cstring>
 
 namespace MotorControl {
 
@@ -51,7 +52,6 @@ namespace MotorControl {
 
 	bool MotorCommandHandler::getMotorSpeed(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength)
 	{
-		float* ptr;
 		payload = new uint8_t[4];
 		payloadLength = 4;
 
@@ -59,8 +59,12 @@ namespace MotorControl {
 		float speed = m_pController->getMotorSpeed();
 
 		// now copy it over into the payload byte array
-		ptr = (float*) payload;
-		*ptr = speed;
+		// float* ptr;
+		// ptr = (float*) payload;
+		// *ptr = speed;
+
+		// TODO: verify this works, and is memory safe
+		std::memcpy(payload, &speed, 4);
 
 		return true;
 	}

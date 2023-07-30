@@ -13,25 +13,28 @@ extern Logging::Logger theLogger;
 
 namespace MotorControl
 {
-
 	Controller::Controller() :
 		m_lastEncoderCount(m_motorDriver.getEncoderCounts())
 	{
-		m_state = new MotorControlStates::Disabled(&m_motorDriver);
+		m_state = std::make_unique<MotorControlStates::Disabled>(&m_motorDriver);
 		std::memset(m_pMotorSpeedBuffer, 0, sizeof(float)*VELOCITY_BUFFER_SIZE);
 	}
 
 	void Controller::tick()
 	{
-		MotorControlState* nextState{nullptr};
+		std::unique_ptr<MotorControlState> nextState;
+
+		// create a null motor command object that we use to call the motor state event handler
+		// for events without a command
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
 
 		if (m_state->getId() == FAULT)
-			nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullptr});
+			nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
 		else if (m_motorDriver.isDriverFaulted())
 			// TODO: Could move fault detection to interrupt
-			nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullptr});
+			nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});
 		else
-			nextState = m_state->handleEvent(MotorEvent{TICK, nullptr});
+			nextState = m_state->handleEvent(MotorEvent{TICK, nullMotorCommand});
 
 		updateState(nextState);
 		updateSpeed();
@@ -50,48 +53,48 @@ namespace MotorControl
 
 	}
 
-	void Controller::updateState(MotorControlState* nextState)
+	void Controller::updateState(std::unique_ptr<MotorControlState>& nextState)
 	{
-		if (!nextState)
+		if (nextState.get())
 		{
-			theLogger.logString(error, "Invalid state returned from state " + m_state->getName() +
-					" event handler, remaining in state" + m_state->getName());
-		}
-		else if (nextState != m_state)
-		{
-			delete m_state;
-			m_state = nextState;
+			// a new state was returned
+			m_state = std::move(nextState);
 		}
 	}
 
 	// Motor fault detected, e.g. by GPIO interrupt
 	void Controller::motorFault()
 	{
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullptr});
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});
 		updateState(nextState);
 	}
 
 	void Controller::enableMotor()
 	{
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{ENABLE_MOTOR, nullptr});
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{ENABLE_MOTOR, nullMotorCommand});
 		updateState(nextState);
 	}
 
 	void Controller::disableMotor()
 	{
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{DISABLE_MOTOR, nullptr});
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{DISABLE_MOTOR, nullMotorCommand});
 		updateState(nextState);
 	}
 
 	void Controller::sleepDriver()
 	{
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{SLEEP, nullptr});
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{SLEEP, nullMotorCommand});
 		updateState(nextState);
 	}
 
 	void Controller::wakeDriver()
 	{
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{WAKE, nullptr});
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{WAKE, nullMotorCommand});
 		updateState(nextState);
 	}
 
@@ -113,16 +116,16 @@ namespace MotorControl
 	void Controller::sendCommand(bool forwardDirection, uint16_t dutyCycle, uint16_t rampTimeMs)
 	{
 		// TODO: this assumes tick time is 1 ms, otherwise a conversion is needed
-		MotorCommand* cmd = new MotorCommand{forwardDirection, false, dutyCycle, rampTimeMs};
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{MOTOR_COMMAND, cmd});
+		std::unique_ptr<MotorCommand> cmd = std::make_unique<MotorCommand>(forwardDirection, false, dutyCycle, rampTimeMs);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{MOTOR_COMMAND, cmd});
 		updateState(nextState);
 	}
 
 	void Controller::idleMotor()
 	{
 		// TODO: this assumes tick time is 1 ms, otherwise a conversion is needed
-		MotorCommand* cmd = new MotorCommand{true, false, 0, DEFAULT_RAMP_TIME_MS};
-		MotorControlState* nextState = m_state->handleEvent(MotorEvent{MOTOR_COMMAND, cmd});
+		std::unique_ptr<MotorCommand> cmd = std::make_unique<MotorCommand>(true, false, 0, DEFAULT_RAMP_TIME_MS);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{MOTOR_COMMAND, cmd});
 		updateState(nextState);
 	}
 

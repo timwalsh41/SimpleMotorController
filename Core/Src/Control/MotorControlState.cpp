@@ -56,12 +56,8 @@ namespace MotorControl
 			theLogger.logString(info, "Motor controller entering DISABLED state; disabling motor driver");
 		}
 
-		MotorControlState* Disabled::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Disabled::handleEvent(MotorEvent event)
 		{
-			// we don't process motor commands in this state, so if one is received just free it
-			if (event.cmd)
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case TICK:
@@ -70,23 +66,23 @@ namespace MotorControl
 				case CLEAR_FAULT:
 				case MOTOR_COMMAND:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case ENABLE_MOTOR:
 					// enter idle state, where motor driver will be enabled
-					return new Idle(m_pMotorDriver);
+					return std::make_unique<Idle>(m_pMotorDriver);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return new Fault(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver);
 
 				case SLEEP:
 					// enter sleep state, where motor will be disabled and driver put in sleep mode
-					return new Sleeping(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver);
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller DISABLED state");
-					return this;
+					return nullptr;
 			}
 		}
 
@@ -103,12 +99,8 @@ namespace MotorControl
 			theLogger.logString(info, "Motor controller entering IDLE state, motor enabled");
 		}
 
-		MotorControlState* Idle::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Idle::handleEvent(MotorEvent event)
 		{
-			if (event.eventType != MOTOR_COMMAND && event.cmd)
-				// unexpected command, free it
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case TICK:
@@ -116,32 +108,32 @@ namespace MotorControl
 				case WAKE:
 				case CLEAR_FAULT:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case MOTOR_COMMAND:
 					if (event.cmd)
-						return new Ramp(m_pMotorDriver, event.cmd);
+						return std::make_unique<Ramp>(m_pMotorDriver, event.cmd);
 					else
 					{
 						theLogger.logString(error, "Motor command event received without valid command object");
-						return this;
+						return nullptr;
 					}
 
 				case DISABLE_MOTOR:
 					// enter disabled state, where motor driver will be disabled
-					return new Disabled(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return new Fault(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver);
 
 				case SLEEP:
 					// enter sleeping state, where motor driver will be disabled and put to low power sleep state
-					return new Sleeping(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver);
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller IDLE state");
-					return this;
+					return nullptr;
 			}
 		}
 
@@ -158,12 +150,8 @@ namespace MotorControl
 			theLogger.logString(info, "Motor controller entering FAULT state, disabling motor driver");
 		}
 
-		MotorControlState* Fault::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Fault::handleEvent(MotorEvent event)
 		{
-			// we don't process motor commands in this state, so if one is received just free it
-			if (event.cmd)
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case TICK:
@@ -173,23 +161,20 @@ namespace MotorControl
 				case WAKE:
 				case MOTOR_FAULT:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case CLEAR_FAULT:
 					if (m_pMotorDriver->isDriverFaulted())
-						return this;
+						return nullptr;
 					else
-						return new Disabled(m_pMotorDriver);
+						return std::make_unique<Disabled>(m_pMotorDriver);
 
 				case MOTOR_COMMAND:
-				// we are required to delete the command object if one is provided
-				if (event.cmd)
-					delete event.cmd;
-				return this;
+					return nullptr;
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller FAULT state");
-					return this;
+					return nullptr;
 			}
 		}
 
@@ -206,12 +191,8 @@ namespace MotorControl
 			theLogger.logString(info, "Motor controller entering SLEEPING state, sleeping motor driver");
 		}
 
-		MotorControlState* Sleeping::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Sleeping::handleEvent(MotorEvent event)
 		{
-			// we don't process motor commands in this state, so if one is received just free it
-			if (event.cmd)
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case TICK:
@@ -220,25 +201,22 @@ namespace MotorControl
 				case SLEEP:
 				case CLEAR_FAULT:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case MOTOR_COMMAND:
-					// we are required to delete the command object if one is provided
-					if (event.cmd)
-						delete event.cmd;
-					return this;
+					return nullptr;
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return new Fault(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver);
 
 				case WAKE:
 					theLogger.logString(info, "Received wake event, waking motor driver");
-					return new Disabled(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver);
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller SLEEPING state");
-					return this;
+					return nullptr;
 			}
 		}
 
@@ -246,24 +224,17 @@ namespace MotorControl
 		// ******** RAMP STATE *******
 		// ***************************
 
-		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, MotorCommand* pMotorCommand) :
+		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, std::unique_ptr<MotorCommand>& pMotorCommand) :
 				MotorControlState(pMotorDriver),
-				m_pMotorCommand{pMotorCommand}
+				m_pMotorCommand{std::move(pMotorCommand)}
 		{
 			m_stateId = RAMP;
 			setName("RAMP");
 
-			if (!m_pMotorCommand)
+			if (!m_pMotorCommand.get())
 			{
 				// no valid command received - exit state right away
 				m_stateExitTime = m_stateEntryTime;
-
-				// manufacture an artificial command so we can smoothly transition out of the state
-				m_pMotorCommand = new MotorCommand{m_pMotorDriver->getForwardDirection(),	// forwardDirection
-												   false,									// direcctionChange
-												   m_pMotorDriver->getPwmDutyCycle(),		// pwmDutyCycle
-												   0};										// rampTimeTicks
-
 				theLogger.logString(error, "Entering ramp state, no motor command provided, speed will be unchanged");
 			}
 			else
@@ -308,16 +279,10 @@ namespace MotorControl
 
 		Ramp::~Ramp()
 		{
-			if (m_pMotorCommand)
-				delete m_pMotorCommand;
 		}
 
-		MotorControlState* Ramp::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Ramp::handleEvent(MotorEvent event)
 		{
-			// we don't process motor commands in this state, so if one is received just free it
-			if (event.cmd)
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case ENABLE_MOTOR:
@@ -325,7 +290,7 @@ namespace MotorControl
 				case WAKE:
 				case CLEAR_FAULT:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case TICK:
 					// check to see if it's time to exit the state
@@ -339,9 +304,9 @@ namespace MotorControl
 
 						// exit to the correct state
 						if (m_pMotorCommand->pwmDutyCycle == 0)
-							return new Idle(m_pMotorDriver);
+							return std::make_unique<Idle>(m_pMotorDriver);
 						else
-							return new Running(m_pMotorDriver);
+							return std::make_unique<Running>(m_pMotorDriver);
 					}
 
 					{
@@ -358,7 +323,7 @@ namespace MotorControl
 								m_pMotorDriver->setForwardDirection(m_pMotorCommand->forwardDirection);
 
 								// we will change our delta value, once we reach zero duty cycle we will start to increase
-								// from zero again in the opposite directtion
+								// from zero again in the opposite direction
 								m_dutyCycleChangeRate *= -1;
 
 								m_pMotorDriver->setPwmDutyCycle(newDutyCycle);
@@ -368,7 +333,7 @@ namespace MotorControl
 								// this is an unexpected zero crossing, we will just zero the duty cycle and log the incident
 								m_pMotorDriver->setPwmDutyCycle(0);
 								theLogger.logString(warning, "Unexpected zero crossing in motor driver PWM ramp, idling motor");
-								return new Idle(m_pMotorDriver);
+								return std::make_unique<Idle>(m_pMotorDriver);
 							}
 						}
 						else
@@ -377,23 +342,23 @@ namespace MotorControl
 						}
 					}
 
-					return this;
+					return nullptr;
 
 				case MOTOR_COMMAND:
 					// We don't process new commands while ramping
 					theLogger.logString(warning, "Ignoring new motor command received while ramping");
 
-					return this;
+					return nullptr;
 
 				case DISABLE_MOTOR:
-					return new Disabled(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver);
 
 				case MOTOR_FAULT:
-					return new Fault(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver);
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller RAMP state");
-					return this;
+					return nullptr;
 			}
 		}
 
@@ -413,12 +378,8 @@ namespace MotorControl
 			theLogger.logString(info, logStringStream.str());
 		}
 
-		MotorControlState* Running::handleEvent(MotorEvent event)
+		std::unique_ptr<MotorControlState> Running::handleEvent(MotorEvent event)
 		{
-			if (event.eventType != MOTOR_COMMAND && event.cmd)
-				// unexpected command, free it
-				delete event.cmd;
-
 			switch (event.eventType)
 			{
 				case TICK:
@@ -426,32 +387,32 @@ namespace MotorControl
 				case WAKE:
 				case CLEAR_FAULT:
 					// do nothing
-					return this;
+					return nullptr;
 
 				case MOTOR_COMMAND:
 					if (event.cmd)
-						return new Ramp(m_pMotorDriver, event.cmd);
+						return std::make_unique<Ramp>(m_pMotorDriver, event.cmd);
 					else
 					{
 						theLogger.logString(error, "Motor command event received without valid command object");
-						return this;
+						return nullptr;
 					}
 
 				case DISABLE_MOTOR:
 					// enter disabled state, where motor driver will be disabled
-					return new Disabled(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return new Fault(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver);
 
 				case SLEEP:
 					// enter sleeping state, where motor driver will be disabled and put to low power sleep state
-					return new Sleeping(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver);
 
 				default:
 					theLogger.logString(error, "Unhandled event type in motor controller IDLE state");
-					return this;
+					return nullptr;
 			}
 		}
 	} // namespace MotorControlStates

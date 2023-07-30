@@ -104,8 +104,6 @@ void MessageHandler::processMessages()
 
 void MessageHandler::buildCommandMap()
 {
-	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
-	// TODO: what the hell does the lambda capture actually do??
 	m_commandMap[CMD_ENABLE_MOTOR] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
 			{
 				return theMotorCommandHandler.enableMotor(msg, payload, payloadLength);
@@ -130,6 +128,8 @@ void MessageHandler::buildCommandMap()
 			{
 				return theMotorCommandHandler.getMotorSpeed(msg, payload, payloadLength);
 			};
+
+	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
 }
 
 } /* namespace MessageHandling */

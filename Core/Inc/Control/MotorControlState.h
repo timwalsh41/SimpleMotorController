@@ -20,6 +20,7 @@
 #include <PololuG2MotorDriver.h>
 #include "stm32l4xx_hal.h"
 #include <string>
+#include <memory>
 
 namespace MotorControl
 {
@@ -48,6 +49,12 @@ namespace MotorControl
 
 	typedef struct MotorCommandType
 	{
+		MotorCommandType(bool direction, bool change, int32_t dutyCycle, uint32_t rampTime) :
+			forwardDirection{direction},
+			directionChange{change},
+			pwmDutyCycle{dutyCycle},
+			rampTimeTicks{rampTime}
+			{}
 		bool forwardDirection;
 		bool directionChange;
 		int32_t pwmDutyCycle;
@@ -57,7 +64,7 @@ namespace MotorControl
 	typedef struct MotorEventStruct
 	{
 		EventType eventType;
-		MotorCommand *cmd;
+		std::unique_ptr<MotorCommand>& cmd;
 	} MotorEvent;
 
 	class MotorControlState {
@@ -65,7 +72,7 @@ namespace MotorControl
 		MotorControlState(PololuG2MotorDriver*);
 		virtual ~MotorControlState();
 
-		virtual MotorControlState* handleEvent(MotorEvent) = 0;
+		virtual std::unique_ptr<MotorControlState> handleEvent(MotorEvent) = 0;
 		std::string getName() const { return m_stateName; }
 		void setName(std::string name) { m_stateName = name; }
 		MotorStateIdCode getId() const { return m_stateId; }
@@ -86,38 +93,38 @@ namespace MotorControl
 		{
 		public:
 			Disabled(PololuG2MotorDriver*);
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Idle : public MotorControlState
 		{
 		public:
 			Idle(PololuG2MotorDriver*);
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Fault : public MotorControlState
 		{
 		public:
 			Fault(PololuG2MotorDriver*);
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Sleeping : public MotorControlState
 		{
 		public:
 			Sleeping(PololuG2MotorDriver*);
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Ramp : public MotorControlState
 		{
 		public:
-			Ramp(PololuG2MotorDriver*, MotorCommand*);
+			Ramp(PololuG2MotorDriver*, std::unique_ptr<MotorCommand>&);
 			~Ramp();
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		private:
-			MotorCommand* m_pMotorCommand{nullptr};
+			std::unique_ptr<MotorCommand> m_pMotorCommand;
 			uint32_t m_stateExitTime{0};
 			int32_t m_dutyCycleChangeRate{0};
 		};
@@ -126,7 +133,7 @@ namespace MotorControl
 		{
 		public:
 			Running(PololuG2MotorDriver*);
-			MotorControlState* handleEvent(MotorEvent) override;
+			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 	} // namespace MotorControlStates
 

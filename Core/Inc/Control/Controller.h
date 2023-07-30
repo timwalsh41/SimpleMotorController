@@ -8,8 +8,9 @@
 #ifndef SRC_CONTROLLER_H_
 #define SRC_CONTROLLER_H_
 
-#include <MotorControlState.h>
-#include <PololuG2MotorDriver.h>
+#include <memory>
+#include "MotorControlState.h"
+#include "PololuG2MotorDriver.h"
 
 namespace MotorControl
 {
@@ -46,10 +47,10 @@ namespace MotorControl
 		float getMotorSpeed() const { return m_bufferedMotorSpeed; }
 
 	private:
-		void updateState(MotorControlState*);
+		void updateState(std::unique_ptr<MotorControlState>&);
 
 		PololuG2MotorDriver m_motorDriver;
-		MotorControlState *m_state{nullptr};
+		std::unique_ptr<MotorControlState> m_state{nullptr};
 
 		// motor speed is measured in units of encoder counts per tick
 		float m_instantaneousMotorSpeed{0};
