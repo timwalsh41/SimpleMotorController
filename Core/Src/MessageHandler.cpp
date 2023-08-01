@@ -68,17 +68,15 @@ void MessageHandler::processMessages()
 			else
 			{
 				// valid command code, attempt to process command
-				uint8_t* returnData{nullptr};
-				uint8_t returnDataLength{0};
+				std::vector<uint8_t> returnData{};
 
-				if (m_commandMap[msg.getCommandCode()](msg, returnData, returnDataLength))
+				if (m_commandMap[msg.getCommandCode()](msg, returnData))
 				{
 					// successfully processed command, we will log this in the command function itself
-					if (returnData)
+					if (!returnData.empty())
 					{
 						// not all messages have a payload, so if we receive one then copy it into the output message
-						msg.setPayload(returnData, returnDataLength);
-						delete[] returnData;
+						msg.setPayload(returnData.data(), returnData.size());
 					}
 				}
 				else
@@ -86,9 +84,6 @@ void MessageHandler::processMessages()
 					// failure processing command
 					uint8_t payload = ACK_INVALID_PAYLOAD;
 					msg.setPayload(&payload, 1);
-
-					if (returnData)
-						delete[] returnData;
 
 					theLogger.logString(error, std::string("Unable to execute command"));
 				}
@@ -100,34 +95,36 @@ void MessageHandler::processMessages()
 	}
 }
 
-// TODO: I INSERTED CMD_GET_MOTOR_SPEED AT 0x42 ON PLANE WITHOUT INTERNET, NEED TO UPDATE COMMAND MAP ON ONENOTE
-
 void MessageHandler::buildCommandMap()
 {
-	m_commandMap[CMD_ENABLE_MOTOR] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_ENABLE_MOTOR] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.enableMotor(msg, payload, payloadLength);
+				return theMotorCommandHandler.enableMotor(msg, payload);
 			};
-	m_commandMap[CMD_DISABLE_MOTOR] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_DISABLE_MOTOR] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.disableMotor(msg, payload, payloadLength);
+				return theMotorCommandHandler.disableMotor(msg, payload);
 			};
-	m_commandMap[CMD_SLEEP_DRIVER] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_SLEEP_DRIVER] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.sleepDriver(msg, payload, payloadLength);
+				return theMotorCommandHandler.sleepDriver(msg, payload);
 			};
-	m_commandMap[CMD_WAKE_DRIVER] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_WAKE_DRIVER] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.wakeDriver(msg, payload, payloadLength);
+				return theMotorCommandHandler.wakeDriver(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_POS] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_GET_MOTOR_POS] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.getMotorPosition(msg, payload, payloadLength);
+				return theMotorCommandHandler.getMotorPosition(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_SPEED] = [](const Message& msg, uint8_t* payload, uint8_t& payloadLength)
+	m_commandMap[CMD_GET_MOTOR_SPEED] = [](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.getMotorSpeed(msg, payload, payloadLength);
+				return theMotorCommandHandler.getMotorSpeed(msg, payload);
 			};
+	m_commandMap[CMD_GET_MOTOR_DIR] = [](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return theMotorCommandHandler.getMotorDirection(msg, payload);
+				};
 
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
 }

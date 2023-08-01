@@ -15,7 +15,7 @@ extern Logging::Logger theLogger;
 namespace Utility
 {
 
-	bool sendVersionMessage(const MessageHandling::Message& msg, uint8_t* returnData, uint8_t& returnDataLength)
+	bool sendVersionMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& returnData)
 	{
 
 
@@ -26,10 +26,9 @@ namespace Utility
 			return false;
 		}
 
-		returnData = new uint8_t[3];
-		returnData[0] = MAJOR_VERSION;
-		returnData[1] = MINOR_VERSION;
-		returnData[2] = BUILD;
+		returnData.push_back(MAJOR_VERSION);
+		returnData.push_back(MINOR_VERSION);
+		returnData.push_back(BUILD);
 
 		theLogger.logString(info, "Successfully processed version command");
 

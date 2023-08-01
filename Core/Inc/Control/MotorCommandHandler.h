@@ -10,18 +10,20 @@
 
 #include "Controller.h"
 #include "Message.h"
+#include <vector>
 
 namespace MotorControl {
 
 class MotorCommandHandler {
 public:
 	MotorCommandHandler(Controller* controller) : m_pController{controller} {}
-	bool enableMotor(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
-	bool disableMotor(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
-	bool sleepDriver(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
-	bool wakeDriver(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
-	bool getMotorPosition(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
-	bool getMotorSpeed(const MessageHandling::Message& msg, uint8_t* payload, uint8_t& payloadLength);
+	bool enableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool disableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool sleepDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool wakeDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool getMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool getMotorSpeed(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool getMotorDirection(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 private:
 	Controller* m_pController{nullptr};
 };

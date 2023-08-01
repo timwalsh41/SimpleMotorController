@@ -11,6 +11,7 @@
 #include <queue>
 #include <unordered_map>
 #include <functional>
+#include <vector>
 #include "Message.h"
 
 namespace MessageHandling
@@ -29,7 +30,7 @@ namespace MessageHandling
 		void buildCommandMap();
 
 		std::queue<Message> m_messageQueue;
-		std::unordered_map<uint8_t, std::function<bool(const Message&, uint8_t*, uint8_t&)>> m_commandMap;
+		std::unordered_map<uint8_t, std::function<bool(const Message&, std::vector<uint8_t>&)>> m_commandMap;
 	};
 
 } /* namespace MessageHandling */
