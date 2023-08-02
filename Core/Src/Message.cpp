@@ -25,39 +25,34 @@ namespace MessageHandling
 
 	Message::Message(const Message& other) :
 			m_commandCode{other.m_commandCode},
-			m_payloadLength{other.m_payloadLength},
 			m_crc{other.m_crc}
 	{
-		if (m_payloadLength)
+		if (!other.m_payload.empty())
 		{
-			m_pPayload = new uint8_t[m_payloadLength];
-			std::memcpy(m_pPayload, other.m_pPayload, m_payloadLength);
+			m_payload = other.m_payload;
 		}
 	}
 
 	Message::Message(Message&& other) :
 			m_commandCode{other.m_commandCode},
-			m_payloadLength{other.m_payloadLength},
 			m_crc{other.m_crc}
 	{
 		// theLogger.logString(debug, "Move construction of Message");
 
-		if (m_payloadLength)
+		if (!other.m_payload.empty())
 		{
-			m_pPayload = other.m_pPayload;
-			other.m_pPayload = nullptr;
-			other.m_payloadLength = 0;
+			m_payload = std::move(other.m_payload);
 		}
 	}
 
 	Message::~Message()
 	{
-		if (m_pPayload != nullptr)
-			delete[] m_pPayload;
+
 	}
 
 	bool Message::loadFromBytes(uint8_t message_length, const uint8_t* const raw_message)
 	{
+		uint8_t payloadLength;
 		if (message_length < MINIMUM_MESSAGE_LENGTH)
 		{
 			theLogger.logString(warning, "Received message less than the minimum length");
@@ -65,12 +60,12 @@ namespace MessageHandling
 		}
 
 		m_commandCode = raw_message[0];
-		m_payloadLength = message_length - 3;
+		payloadLength = message_length - 3;
 
-		if (m_payloadLength)
+		if (payloadLength)
 		{
-			m_pPayload = new uint8_t[m_payloadLength];
-			std::memcpy(m_pPayload, &raw_message[1], m_payloadLength);
+			m_payload.reserve(payloadLength);
+			std::memcpy(m_payload.data(), &raw_message[1], payloadLength);
 		}
 
 		// TODO: make sure endianness is correct here
@@ -78,56 +73,44 @@ namespace MessageHandling
 		return true;
 	}
 
-
-	#ifdef DEBUG
-	// Dummy CRC calculator, always return 0x6161 = 'aa'
-	uint16_t calculateCRC(uint8_t*, uint32_t)
+	uint16_t Message::calculateMessageCRC() const
 	{
+#ifdef DEBUG
 		// return "ab" as the CRC16, in little endian format (least significant byte at lowest
 		// memory address
 		return 0x6261;
-	}
-	#else
-	// Calculate CRC16 for the input byte array, set the two byte response
-	// in the provided crc pointer
-	// Uses CRC-CCITT polynomial (0x1021)
-	// Reference:
-	// https://en.wikipedia.org/wiki/Computation_of_cyclic_redundancy_checks#Bit_ordering_(endianness)
-	// Useful CRC calculator to validate code:
-	// http://www.zorc.breitbandkatze.de/crc.html
-	uint16_t calculateCRC(uint8_t* byteArray, uint32_t length)
-	{
+#else
+		// Calculate CRC16 for the input byte array, set the two byte response
+		// in the provided crc pointer
+		// Uses CRC-CCITT polynomial (0x1021)
+		// Reference:
+		// https://en.wikipedia.org/wiki/Computation_of_cyclic_redundancy_checks#Bit_ordering_(endianness)
+		// Useful CRC calculator to validate code:
+		// http://www.zorc.breitbandkatze.de/crc.html
+
 		uint16_t rem = 0;
 
-		for (size_t i = 0; i < length; i++)
+		auto processWord = [](uint16_t rem, uint8_t byte)
 		{
-			rem ^= static_cast<uint16_t>(byteArray[i]) << 8;
+			rem ^= static_cast<uint16_t>(byte) << 8;
 
-			for (size_t j = 0; j < 8; j++)
+			for (size_t i = 0; i < 8; i++)
 			{
 				if (rem & 0x8000)
 					rem = (rem << 1) ^ 0x1021;
 				else
 					rem = rem << 1;
 			}
-		}
+
+			return rem;
+		};
+
+		rem = processWord(rem, m_commandCode);
+		for (uint8_t byte : m_payload)
+			rem = processWord(rem, byte);
 
 		return rem;
-	}
-	#endif
-
-	uint16_t Message::calculateMessageCRC() const
-	{
-		uint8_t* byteArray = new uint8_t[m_payloadLength + 1];
-		uint16_t crc;
-
-		byteArray[0] = m_commandCode;
-		if (m_payloadLength)
-			std::memcpy(&byteArray[1], m_pPayload, m_payloadLength);
-
-		crc = calculateCRC(byteArray, m_payloadLength + 1);
-		delete[] byteArray;
-		return crc;
+#endif
 	}
 
 	// Check the CRC, used for validating an incoming message
@@ -143,11 +126,15 @@ namespace MessageHandling
 		m_crc = calculateMessageCRC();
 	}
 
-	void Message::setPayload(const uint8_t* payload, uint32_t payloadLength)
+	void Message::setPayload(const std::vector<uint8_t>& payload)
 	{
-		m_payloadLength = payloadLength;
-		m_pPayload = new uint8_t[m_payloadLength];
-		std::memcpy(m_pPayload, payload, m_payloadLength);
+		if (!payload.empty())
+			m_payload = payload;
+	}
+
+	void Message::setPayload(const uint8_t& payload)
+	{
+		m_payload.push_back(payload);
 	}
 
 	Message& Message::operator=(const Message& other)
@@ -155,20 +142,14 @@ namespace MessageHandling
 		if (&other == this)
 			return *this;
 
-		if (m_pPayload != nullptr)
-			delete[] m_pPayload;
-
 		m_commandCode = other.m_commandCode;
-		m_payloadLength = other.m_payloadLength;
 		m_crc = other.m_crc;
 
-		if (m_payloadLength)
+		if (!other.m_payload.empty())
 		{
-			m_pPayload = new uint8_t[m_payloadLength];
-			std::memcpy(m_pPayload, other.m_pPayload, m_payloadLength);
+			m_payload = other.m_payload;
 		}
 		else
-			m_pPayload = nullptr;
 
 		return *this;
 	}
@@ -178,22 +159,15 @@ namespace MessageHandling
 		if (&other == this)
 			return *this;
 
-		if (m_pPayload != nullptr)
-				delete[] m_pPayload;
-
 		// theLogger.logString(debug, std::string("Move assignment of Message"));
 
 		m_commandCode = other.m_commandCode;
-		m_payloadLength = other.m_payloadLength;
 		m_crc = other.m_crc;
 
-		if (m_payloadLength)
+		if (!other.m_payload.empty())
 		{
-			m_pPayload = other.m_pPayload;
-			other.m_pPayload = nullptr;
+			m_payload = std::move(other.m_payload);
 		}
-		else
-			m_pPayload = nullptr;
 
 		return *this;
 	}
@@ -211,7 +185,7 @@ namespace MessageHandling
 		}
 
 		// total length includes command code, payload, and 2 byte CRC
-		length = 3 + m_payloadLength;
+		length = 3 + m_payload.size();
 
 		*message = new uint8_t[length];
 
@@ -225,8 +199,8 @@ namespace MessageHandling
 		// OutputGateway::addStartStopSequence
 
 		*message[0] = m_commandCode;
-		if (m_payloadLength)
-			std::memcpy(*message+1, m_pPayload, m_payloadLength);
+		if (!m_payload.empty())
+			std::memcpy(*message+1, m_payload.data(), m_payload.size());
 
 		// note this stores in little endian format (least significant byte at the lowest
 		// memory address)

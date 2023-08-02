@@ -42,6 +42,8 @@ void MessageHandler::processMessages()
 
 	while (!m_messageQueue.empty())
 	{
+		// Grab the latest message, we'll just move it out of the queue now so we don't need to keep track of
+		// when we can release it
 		msg = std::move(m_messageQueue.front());
 		m_messageQueue.pop();
 
@@ -49,7 +51,7 @@ void MessageHandler::processMessages()
 		{
 			// invalid message CRC
 			uint8_t payload = ACK_INVALID_CRC;
-			msg.setPayload(&payload, 1);
+			msg.setPayload(payload);
 
 			theLogger.logString(error, std::string("Received message with bad CRC"));
 		}
@@ -61,7 +63,7 @@ void MessageHandler::processMessages()
 			{
 				// invalid command code received
 				uint8_t payload = ACK_INVALID_COMMAND;
-				msg.setPayload(&payload, 1);
+				msg.setPayload(payload);
 
 				theLogger.logString(error, std::string("Received message with invalid command code"));
 			}
@@ -76,14 +78,14 @@ void MessageHandler::processMessages()
 					if (!returnData.empty())
 					{
 						// not all messages have a payload, so if we receive one then copy it into the output message
-						msg.setPayload(returnData.data(), returnData.size());
+						msg.setPayload(returnData);
 					}
 				}
 				else
 				{
 					// failure processing command
 					uint8_t payload = ACK_INVALID_PAYLOAD;
-					msg.setPayload(&payload, 1);
+					msg.setPayload(payload);
 
 					theLogger.logString(error, std::string("Unable to execute command"));
 				}

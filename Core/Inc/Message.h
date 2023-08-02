@@ -9,6 +9,7 @@
 #define INC_MESSAGE_H_
 
 #include "stdint.h"
+#include <vector>
 
 namespace MessageHandling
 {
@@ -36,14 +37,14 @@ namespace MessageHandling
 		bool checkCRC() const;
 		void setCRC();
 		uint8_t getCommandCode() const { return m_commandCode; }
-		uint32_t getPayloadLength() const { return m_payloadLength; }
-		uint8_t* getPayload() const { return m_pPayload; }
+		uint32_t getPayloadLength() const { return m_payload.size(); }
 		uint16_t getCRC() const { return m_crc; };
 
 		void setCommandCode(uint8_t commandCode) { m_commandCode = commandCode; }
 		void setAck() { m_commandCode |= ACK_BIT_MASK; }
 		void clearAck() { m_commandCode &= ~ACK_BIT_MASK; }
-		void setPayload(const uint8_t* payload, uint32_t payloadLength);
+		void setPayload(const std::vector<uint8_t>& payload);
+		void setPayload(const uint8_t&);
 
 		bool toByteArray(uint8_t **message, uint32_t& length) const;
 
@@ -51,8 +52,7 @@ namespace MessageHandling
 		uint16_t calculateMessageCRC() const;
 
 		uint8_t m_commandCode{0};
-		uint32_t m_payloadLength{0};
-		uint8_t* m_pPayload{nullptr};
+		std::vector<uint8_t> m_payload;
 		uint16_t m_crc{0};
 	};
 
