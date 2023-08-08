@@ -6,7 +6,12 @@
  */
 
 #include "CurrentSensor.h"
+#include "Logger.h"
 #include <algorithm>
+#include <cstring>
+#include <algorithm>
+
+extern Logging::Logger theLogger;
 
 namespace Sensors
 {
@@ -65,6 +70,7 @@ namespace Sensors
 
 	// Load values in chronological order from storage buffer into the provided output buffer
 	// Requires that outputBuffer has at least numSamples allocated
+	// TODO: this function is not actually used
 	bool CurrentSensor::getStorageBuffer(uint16_t* outputBuffer, uint32_t& numSamples)
 	{
 		// we cap the number of samples at the length of the storage buffer
@@ -96,6 +102,45 @@ namespace Sensors
 		return false;
 	}
 
+	bool CurrentSensor::getMotorCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		// motor current request has a two byte payload equal to the number of milliseconds of data to send
+		if (msg.getPayload().size() != 2)
+			return false;
+
+		// retrieve the desired number of milliseconds of data from the payload
+		uint16_t millisecondsOfData{0};
+		std::memcpy(&millisecondsOfData, msg.getPayload().data(), 2);
+
+		// TODO: this relies on system tick time being one millisecond
+		uint32_t numDataPoints = static_cast<uint32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+		numDataPoints = std::min(numDataPoints, CURRENT_SENSOR_STORAGE_LENGTH);
+
+		// the required size of the return data is two bytes for the number of data points plus 4 bytes per data point
+		uint32_t payloadSize = 2 + sizeof(float)*numDataPoints;
+		payload.reserve(payloadSize);
+
+		if (payload.capacity() != payloadSize)
+		{
+			theLogger.logString(error, std::string("Unable to allocate memory for returning motor current array"));
+			return false;
+		}
+
+		uint8_t transferBuffer[sizeof(float)];
+		for (int32_t i = m_storageBufferPtr-1; i >= 0; --i)
+		{
+			std::memcpy(transferBuffer, &m_pStorageBuffer[i], sizeof(float));
+			payload.insert(payload.end(), &transferBuffer[0], &transferBuffer[sizeof(float)]);
+		}
+
+		for (int32_t i = CURRENT_SENSOR_STORAGE_LENGTH-1; i >= static_cast<int32_t>(m_storageBufferPtr); --i)
+		{
+			std::memcpy(transferBuffer, &m_pStorageBuffer[i], sizeof(float));
+			payload.insert(payload.end(), &transferBuffer[0], &transferBuffer[sizeof(float)]);
+		}
+
+		return true;
+	}
 
 	void zeroCurrentSensor()
 	{

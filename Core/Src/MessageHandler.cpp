@@ -9,11 +9,13 @@
 #include "CommandInterface.h"
 #include "OutputGateway.h"
 #include "MotorCommandHandler.h"
+#include "CurrentSensor.h"
 #include "Logger.h"
 #include "Version.h"
 
 extern MotorControl::MotorCommandHandler theMotorCommandHandler;
 extern MessageHandling::OutputGateway theOutputGateway;
+extern Sensors::CurrentSensor theCurrentSensor;
 extern Logging::Logger theLogger;
 
 namespace MessageHandling
@@ -37,8 +39,6 @@ void MessageHandler::loadIncomingMessage(Message& msg)
 void MessageHandler::processMessages()
 {
 	Message msg;
-	msg.setCommandCode(msg.getCommandCode());
-	msg.setAck();
 
 	while (!m_messageQueue.empty())
 	{
@@ -74,12 +74,17 @@ void MessageHandler::processMessages()
 
 				if (m_commandMap[msg.getCommandCode()](msg, returnData))
 				{
+					std::vector<uint8_t> payload;
+					payload.push_back(ACK_SUCCESSFUL);
+
 					// successfully processed command, we will log this in the command function itself
 					if (!returnData.empty())
 					{
 						// not all messages have a payload, so if we receive one then copy it into the output message
-						msg.setPayload(returnData);
+						payload.insert(payload.end(), returnData.begin(), returnData.end());
 					}
+
+					msg.setPayload(payload);
 				}
 				else
 				{
@@ -92,6 +97,7 @@ void MessageHandler::processMessages()
 			}
 		}
 
+		msg.setAck();
 		msg.setCRC();
 		theOutputGateway.sendMessage(msg);
 	}
@@ -124,9 +130,14 @@ void MessageHandler::buildCommandMap()
 				return theMotorCommandHandler.getMotorSpeed(msg, payload);
 			};
 	m_commandMap[CMD_GET_MOTOR_DIR] = [](const Message& msg, std::vector<uint8_t>& payload)
-				{
-					return theMotorCommandHandler.getMotorDirection(msg, payload);
-				};
+			{
+				return theMotorCommandHandler.getMotorDirection(msg, payload);
+			};
+	m_commandMap[CMD_GET_MOTOR_CURRENT] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return theCurrentSensor.getMotorCurrent(msg, payload);
+			};
+
 
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
 }

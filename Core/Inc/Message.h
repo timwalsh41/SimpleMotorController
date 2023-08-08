@@ -46,6 +46,8 @@ namespace MessageHandling
 		void setPayload(const std::vector<uint8_t>& payload);
 		void setPayload(const uint8_t&);
 
+		const std::vector<uint8_t>& getPayload() const { return m_payload; }
+
 		bool toByteArray(uint8_t **message, uint32_t& length) const;
 
 	private:

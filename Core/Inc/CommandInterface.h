@@ -19,6 +19,9 @@ constexpr char STOP_SEQUENCE[] = {'M', 'N', 'O', 'P'};
 constexpr size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE)/sizeof(char);
 constexpr size_t STOP_SEQUENCE_LENGTH = sizeof(STOP_SEQUENCE)/sizeof(char);
 
+// Response code for command processed successfully
+constexpr uint8_t ACK_SUCCESSFUL = 0x2B; // '+'
+
 // Response code for invalid CRC in original message
 constexpr uint8_t ACK_INVALID_CRC = 0x28;	// '('
 

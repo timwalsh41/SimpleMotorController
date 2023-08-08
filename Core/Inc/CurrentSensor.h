@@ -8,6 +8,7 @@
 #ifndef SRC_CURRENTSENSOR_H_
 #define SRC_CURRENTSENSOR_H_
 
+#include "Message.h"
 #include "stdint.h"
 
 namespace Sensors
@@ -50,6 +51,9 @@ namespace Sensors
 
 		bool getStorageBuffer(uint16_t* outputBuffer, uint32_t& numSamples);
 
+		// command handler to get motor current data
+		bool getMotorCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+
 		void zeroCurrentSensor();
 
 	private:
@@ -61,7 +65,7 @@ namespace Sensors
 		// measurement
 		uint32_t* m_pCurrentBuffer{nullptr};
 
-		// storage buffer and a pointer to use for circular storage
+		// storage buffer and a pointer to use for circular storage;
 		float m_pStorageBuffer[CURRENT_SENSOR_STORAGE_LENGTH];
 		uint32_t m_storageBufferPtr{0};
 

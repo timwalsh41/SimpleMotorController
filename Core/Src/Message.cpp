@@ -149,7 +149,6 @@ namespace MessageHandling
 		{
 			m_payload = other.m_payload;
 		}
-		else
 
 		return *this;
 	}
