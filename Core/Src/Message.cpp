@@ -33,7 +33,7 @@ namespace MessageHandling
 		}
 	}
 
-	Message::Message(Message&& other) :
+	Message::Message(Message&& other) noexcept :
 			m_commandCode{other.m_commandCode},
 			m_crc{other.m_crc}
 	{
@@ -53,6 +53,8 @@ namespace MessageHandling
 	bool Message::loadFromBytes(uint8_t message_length, const uint8_t* const raw_message)
 	{
 		uint8_t payloadLength;
+		m_payload.clear();
+
 		if (message_length < MINIMUM_MESSAGE_LENGTH)
 		{
 			theLogger.logString(warning, "Received message less than the minimum length");
@@ -65,7 +67,7 @@ namespace MessageHandling
 		if (payloadLength)
 		{
 			m_payload.reserve(payloadLength);
-			std::memcpy(m_payload.data(), &raw_message[1], payloadLength);
+			m_payload.insert(m_payload.begin(), &raw_message[1], &raw_message[1+payloadLength]);
 		}
 
 		// TODO: make sure endianness is correct here
@@ -107,8 +109,9 @@ namespace MessageHandling
 
 		rem = processWord(rem, m_commandCode);
 		for (uint8_t byte : m_payload)
+		{
 			rem = processWord(rem, byte);
-
+		}
 		return rem;
 #endif
 	}
@@ -153,7 +156,7 @@ namespace MessageHandling
 		return *this;
 	}
 
-	Message& Message::operator=(Message&& other)
+	Message& Message::operator=(Message&& other) noexcept
 	{
 		if (&other == this)
 			return *this;
