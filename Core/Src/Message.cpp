@@ -137,6 +137,7 @@ namespace MessageHandling
 
 	void Message::setPayload(const uint8_t& payload)
 	{
+		m_payload.clear();
 		m_payload.push_back(payload);
 	}
 
@@ -182,6 +183,7 @@ namespace MessageHandling
 	{
 		if (!checkCRC())
 		{
+			length = 0;
 			theLogger.logString(error, "Unable to serialize message, CRC mismatch");
 			return false;
 		}
