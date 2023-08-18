@@ -15,26 +15,26 @@ namespace Sensors
 {
 
 	// number of high-speed ADC samples to take at each measurement time point
-	constexpr uint32_t CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT = 5;
+	constexpr int CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT = 5;
 
 	// number of measurement time points per system tick (e.g. per main loop call)
-	constexpr uint32_t CURRENT_SENSOR_MEASUREMENTS_PER_TICK = 50;
+	constexpr int CURRENT_SENSOR_MEASUREMENTS_PER_TICK = 20;
 
 	// number of ticks worth of processed measurements to hold in circular storage buffer
-	constexpr uint32_t CURRENT_SENSOR_STORAGE_LENGTH_TICKS = 50;
+	constexpr int CURRENT_SENSOR_STORAGE_LENGTH_TICKS = 50;
 
 	// number of raw samples recorded in measurement buffers
-	// we oversize the buffer to try to ensure we don't fill two buffers in one
-	// tick interval
-	constexpr uint32_t CURRENT_SENSOR_BUFFER_SIZE = (CURRENT_SENSOR_MEASUREMENTS_PER_TICK + 10) * \
+	// we size the buffer to try to ensure we don't fill two buffers in one
+	// tick interval so that we can call processCurrentMeasurements() in between
+	constexpr int CURRENT_SENSOR_BUFFER_SIZE = (CURRENT_SENSOR_MEASUREMENTS_PER_TICK + 10) * \
 					   CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT;
 
 	// number of processed samples recorded in storage buffer
-	constexpr uint32_t CURRENT_SENSOR_STORAGE_LENGTH = CURRENT_SENSOR_MEASUREMENTS_PER_TICK * \
+	constexpr int CURRENT_SENSOR_STORAGE_LENGTH = CURRENT_SENSOR_MEASUREMENTS_PER_TICK * \
 					   CURRENT_SENSOR_STORAGE_LENGTH_TICKS;
 
 	// default zero offset for current sensor reading
-	constexpr uint32_t CURRENT_SENSOR_ZERO_OFFSET = 2048;
+	constexpr uint32_t CURRENT_SENSOR_ZERO_OFFSET = 0;
 
 	// conversion factor from ADC number to mA
 	// TODO: Set conversion factor
@@ -48,8 +48,6 @@ namespace Sensors
 		void swapBuffer();
 
 		uint32_t* getCurrentBuffer() const;
-
-		bool getStorageBuffer(uint16_t* outputBuffer, uint32_t& numSamples);
 
 		// command handler to get motor current data
 		bool getMotorCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
@@ -66,8 +64,8 @@ namespace Sensors
 		uint32_t* m_pCurrentBuffer{nullptr};
 
 		// storage buffer and a pointer to use for circular storage;
-		float m_pStorageBuffer[CURRENT_SENSOR_STORAGE_LENGTH];
-		uint32_t m_storageBufferPtr{0};
+		std::vector<float> m_storageBuffer;
+		std::vector<float>::iterator m_storageBufferPtr;
 
 		// flag for when a buffer is full and ready to be processed
 		bool m_bBufferReady{false};

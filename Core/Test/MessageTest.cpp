@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <Message.h>
-#include <Logger.h>
 #include <stdint.h>
 #include <iostream>
 #include <ios>

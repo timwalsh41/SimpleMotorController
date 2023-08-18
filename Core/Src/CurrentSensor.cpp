@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstring>
 #include <algorithm>
+#include <iostream>
 
 extern Logging::Logger theLogger;
 
@@ -18,14 +19,17 @@ namespace Sensors
 
 	CurrentSensor::CurrentSensor() {
 
-		for (uint32_t i = 0; i < CURRENT_SENSOR_BUFFER_SIZE; ++i)
+		for (size_t i = 0; i < CURRENT_SENSOR_BUFFER_SIZE; ++i)
 		{
 			m_pBufferA[i] = 0;
 			m_pBufferB[i] = 0;
 		}
 
-		for (uint32_t i = 0; i < CURRENT_SENSOR_STORAGE_LENGTH; ++i)
-			m_pStorageBuffer[i] = 0;
+		m_storageBuffer.reserve(CURRENT_SENSOR_STORAGE_LENGTH);
+		for (size_t i = 0; i < CURRENT_SENSOR_STORAGE_LENGTH; i++)
+			m_storageBuffer.push_back(0);
+
+		m_storageBufferPtr = m_storageBuffer.begin();
 
 		m_pCurrentBuffer = m_pBufferA;
 	}
@@ -35,18 +39,22 @@ namespace Sensors
 	{
 		if (m_bBufferReady)
 		{
-			uint32_t* pBuffer = (m_pCurrentBuffer == m_pBufferA) ? m_pBufferA : m_pBufferB;
+			uint32_t* pBuffer = (m_pCurrentBuffer == m_pBufferA) ? m_pBufferB : m_pBufferA;
 			float sum = 0;
+
 			for (uint32_t i = 0; i < CURRENT_SENSOR_BUFFER_SIZE; i += CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT)
 			{
 				sum = 0;
 				for (uint32_t j = 0; j < CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT; j++)
+				{
 					sum += pBuffer[i+j];
+				}
 
-				m_pStorageBuffer[m_storageBufferPtr++] = (sum / CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT - CURRENT_SENSOR_ZERO_OFFSET) *
+				*m_storageBufferPtr = (sum / CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT - CURRENT_SENSOR_ZERO_OFFSET) *
 														 ADC_TO_MA;
-				if (m_storageBufferPtr == CURRENT_SENSOR_STORAGE_LENGTH)
-					m_storageBufferPtr = 0;
+
+				if (++m_storageBufferPtr == m_storageBuffer.end())
+					m_storageBufferPtr = m_storageBuffer.begin();
 			}
 		}
 	}
@@ -70,38 +78,6 @@ namespace Sensors
 
 	// Load values in chronological order from storage buffer into the provided output buffer
 	// Requires that outputBuffer has at least numSamples allocated
-	// TODO: this function is not actually used
-	bool CurrentSensor::getStorageBuffer(uint16_t* outputBuffer, uint32_t& numSamples)
-	{
-		// we cap the number of samples at the length of the storage buffer
-		numSamples = std::min(numSamples, CURRENT_SENSOR_STORAGE_LENGTH);
-
-		// a pointer to track the index we're copying into for the output buffer, we'll start from the
-		// end with the most recent data
-		int32_t outputBufferPtr = numSamples - 1;
-
-		// start populating the output buffer from the newest samples in the storage buffer
-		for (int32_t i = m_storageBufferPtr-1; i >= 0; --i)
-		{
-			outputBuffer[outputBufferPtr--] = static_cast<uint16_t>(m_pStorageBuffer[i]);
-			if (outputBufferPtr < 0)
-				// we've finished filling the output buffer
-				return true;
-		}
-
-		// wrap the circular buffer
-		for (int32_t i = CURRENT_SENSOR_STORAGE_LENGTH-1; i >= static_cast<int32_t>(m_storageBufferPtr); --i)
-		{
-			outputBuffer[outputBufferPtr--] = static_cast<uint16_t>(m_pStorageBuffer[i]);
-			if (outputBufferPtr < 0)
-				// we've finished filling the output buffer
-				return true;
-		}
-
-		// we shouldn't ever return from here, so this indicates something has gone wrong
-		return false;
-	}
-
 	bool CurrentSensor::getMotorCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
 		// motor current request has a two byte payload equal to the number of milliseconds of data to send
@@ -112,9 +88,18 @@ namespace Sensors
 		uint16_t millisecondsOfData{0};
 		std::memcpy(&millisecondsOfData, msg.getPayload().data(), 2);
 
+		std::cout << "Number of milliseconds of data (desired) = " << millisecondsOfData << "\n";
+
 		// TODO: this relies on system tick time being one millisecond
-		uint32_t numDataPoints = static_cast<uint32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
-		numDataPoints = std::min(numDataPoints, CURRENT_SENSOR_STORAGE_LENGTH);
+		int numDataPoints = static_cast<int32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+
+		if (numDataPoints > CURRENT_SENSOR_STORAGE_LENGTH)
+		{
+			// note we're doing integer divide here to get the maximum number of whole number milliseconds
+			// of data we can transmit
+			millisecondsOfData = CURRENT_SENSOR_STORAGE_LENGTH / CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+			numDataPoints = static_cast<uint32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+		}
 
 		// the required size of the return data is two bytes for the number of data points plus 4 bytes per data point
 		uint32_t payloadSize = 2 + sizeof(float)*numDataPoints;
@@ -126,17 +111,48 @@ namespace Sensors
 			return false;
 		}
 
-		uint8_t transferBuffer[sizeof(float)];
-		for (int32_t i = m_storageBufferPtr-1; i >= 0; --i)
-		{
-			std::memcpy(transferBuffer, &m_pStorageBuffer[i], sizeof(float));
-			payload.insert(payload.end(), &transferBuffer[0], &transferBuffer[sizeof(float)]);
-		}
+		// load in number of milliseconds of data to first two bytes of payload
+		payload.push_back(static_cast<uint8_t>((millisecondsOfData >> 8) & 0xFF));
+		payload.push_back(static_cast<uint8_t>(millisecondsOfData & 0xFF));
 
-		for (int32_t i = CURRENT_SENSOR_STORAGE_LENGTH-1; i >= static_cast<int32_t>(m_storageBufferPtr); --i)
+		std::cout << "Number of milliseconds of data (actual) = " << millisecondsOfData << "\n";
+		std::cout << "Number of measurement data points = " << numDataPoints << "\n";
+		std::cout << "Number of bytes = " << numDataPoints*sizeof(float) << "\n";
+		std::cout << "Storage pointer offset: " << m_storageBufferPtr - m_storageBuffer.begin() << "\n";
+
+		uint8_t transferBuffer[sizeof(float)];
+
+		// To actually copy data into the payload, recall that we are always sending the most recent numDataPoints
+		// points. The most recent point is always at m_storageBufferPtr - 1 (with wrapping for circular buffer). So we
+		// want to get the numDataPoints points prior to m_storageBufferPtr, with wrapping.
+		if ((m_storageBufferPtr - m_storageBuffer.begin()) >= numDataPoints)
 		{
-			std::memcpy(transferBuffer, &m_pStorageBuffer[i], sizeof(float));
-			payload.insert(payload.end(), &transferBuffer[0], &transferBuffer[sizeof(float)]);
+			for (auto it = m_storageBufferPtr - numDataPoints; it != m_storageBufferPtr; ++it)
+			{
+				std::memcpy(transferBuffer, &(*it), sizeof(float));
+				payload.insert(payload.end(), transferBuffer, transferBuffer+sizeof(float));
+			}
+		}
+		else
+		{
+			// to wrap buffer, we'll first find the number of data points we need from the end of the buffer
+			int valuesAtEndOfBuffer = numDataPoints - (m_storageBufferPtr - m_storageBuffer.begin());
+
+			std::cout << "Wrapping buffer, grabbing " << valuesAtEndOfBuffer << " points from the end\n";
+
+			// grab points at the end and insert into payload
+			for (auto it = m_storageBuffer.end() - valuesAtEndOfBuffer; it != m_storageBuffer.end(); ++it)
+			{
+				std::memcpy(transferBuffer, &(*it), sizeof(float));
+				payload.insert(payload.end(), transferBuffer, transferBuffer+sizeof(float));
+			}
+
+			// now grab the remaining points up to the most recent at the location prior to m_storageBufferPtr
+			for (auto it = m_storageBuffer.begin(); it != m_storageBufferPtr; ++it)
+			{
+				std::memcpy(transferBuffer, &(*it), sizeof(float));
+				payload.insert(payload.end(), transferBuffer, transferBuffer+sizeof(float));
+			}
 		}
 
 		return true;
@@ -146,7 +162,6 @@ namespace Sensors
 	{
 		// TODO: figure out how to zero current sensor
 		// could use an average of recent points
-		assert(false);
 	}
 
 } /* namespace CurrentSensor */

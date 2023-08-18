@@ -2,7 +2,7 @@
 
 for arg in "$@"
 do
-    if [[ $arg == "--refresh" ]]; then
+    if [[ $arg == "--reset" ]]; then
         echo "Removing existing build directory"
         rm -rf build
     else
@@ -10,6 +10,7 @@ do
     fi
 done
 
+clear
 echo "Preparing build"
 cmake -S . -B build
 echo
