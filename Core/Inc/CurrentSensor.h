@@ -46,6 +46,7 @@ namespace Sensors
 
 		void processCurrentMeasurements();
 		void swapBuffer();
+		void clearStorageBuffer();
 
 		uint32_t* getCurrentBuffer() const;
 

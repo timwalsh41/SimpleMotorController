@@ -3,6 +3,8 @@
 for arg in "$@"
 do
     if [[ $arg == "--reset" ]]; then
+        # Remove cached build directory - do this when changing
+        # executables/content
         echo "Removing existing build directory"
         rm -rf build
     else

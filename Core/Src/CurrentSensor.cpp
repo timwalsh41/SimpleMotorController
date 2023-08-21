@@ -7,7 +7,6 @@
 
 #include "CurrentSensor.h"
 #include "Logger.h"
-#include <algorithm>
 #include <cstring>
 #include <algorithm>
 #include <iostream>
@@ -26,10 +25,7 @@ namespace Sensors
 		}
 
 		m_storageBuffer.reserve(CURRENT_SENSOR_STORAGE_LENGTH);
-		for (size_t i = 0; i < CURRENT_SENSOR_STORAGE_LENGTH; i++)
-			m_storageBuffer.push_back(0);
-
-		m_storageBufferPtr = m_storageBuffer.begin();
+		clearStorageBuffer();
 
 		m_pCurrentBuffer = m_pBufferA;
 	}
@@ -158,10 +154,17 @@ namespace Sensors
 		return true;
 	}
 
-	void zeroCurrentSensor()
+	void CurrentSensor::zeroCurrentSensor()
 	{
 		// TODO: figure out how to zero current sensor
 		// could use an average of recent points
+	}
+
+	// Clear the storage buffer and set the storage buffer pointer to the start of the array
+	void CurrentSensor::clearStorageBuffer()
+	{
+		m_storageBuffer.assign(CURRENT_SENSOR_STORAGE_LENGTH, 0);
+		m_storageBufferPtr = m_storageBuffer.begin();
 	}
 
 } /* namespace CurrentSensor */
