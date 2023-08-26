@@ -27,6 +27,7 @@
 #include "CurrentSensor.h"
 #include "Controller.h"
 #include "MotorCommandHandler.h"
+#include "STM32Timebase.h"
 #include "Version.h"
 #include "Utility.h"
 /* USER CODE END Includes */
@@ -71,9 +72,10 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint8_t UartRcvBuffer;
 
-SerialParser theSerialParser;
+STM32Timebase timebase;
 OutputGateway theOutputGateway;
 MessageHandler theMessageHandler;
+SerialParser theSerialParser(&timebase, &theMessageHandler);
 CurrentSensor theCurrentSensor;
 Controller theController;
 MotorCommandHandler theMotorCommandHandler(&theController);

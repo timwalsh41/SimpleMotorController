@@ -13,20 +13,21 @@
 #include <functional>
 #include <vector>
 #include "Message.h"
+#include "IMessageHandler.h"
 
 namespace MessageHandling
 {
 
-	class MessageHandler {
+	class MessageHandler : public IMessageHandler
+	{
 	public:
 		MessageHandler();
 		virtual ~MessageHandler();
 
-		void loadIncomingMessage(Message& msg);
-		void processMessages();
+		void loadIncomingMessage(Message& msg) override;
+		void processMessages() override;
 
 	private:
-		bool parseMessage(const Message& input);
 		void buildCommandMap();
 
 		std::queue<Message> m_messageQueue;

@@ -10,6 +10,8 @@
 
 #include "stdint.h"
 #include "CommandInterface.h"
+#include "ITimebase.h"
+#include "IMessageHandler.h"
 
 namespace MessageHandling
 {
@@ -33,7 +35,7 @@ namespace MessageHandling
 
 	class SerialParser {
 	public:
-		SerialParser();
+		SerialParser(ITimebase* timebase, IMessageHandler* messageHandler);
 		~SerialParser();
 
 		SerialParser(const SerialParser&) = delete;
@@ -42,6 +44,9 @@ namespace MessageHandling
 		void ProcessIncomingData();
 	private:
 		ParserState m_state{IDLE};
+		ITimebase* m_timebase{nullptr};
+		IMessageHandler* m_messageHandler{nullptr};
+
 		uint32_t m_messageLength;
 		uint8_t* m_pMessage{nullptr};
 

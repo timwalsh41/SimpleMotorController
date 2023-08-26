@@ -5,13 +5,11 @@
  *      Author: tim
  */
 
-#include "stm32l4xx_hal.h"
 #include "SerialParser.h"
 #include "Message.h"
 #include "MessageHandler.h"
 #include "Logger.h"
 
-extern MessageHandling::MessageHandler theMessageHandler;
 extern Logging::Logger theLogger;
 
 namespace MessageHandling
@@ -26,7 +24,9 @@ namespace MessageHandling
 		return true;
 	}
 
-	SerialParser::SerialParser()
+	SerialParser::SerialParser(ITimebase* timebase, IMessageHandler* messageHandler) :
+			m_timebase(timebase),
+			m_messageHandler(messageHandler)
 	{
 
 	}
@@ -40,7 +40,7 @@ namespace MessageHandling
 	// ISR function to receive the incoming character from the UART buffer
 	void SerialParser::ReceiveChar(uint8_t new_char)
 	{
-		m_lastCharReceivedTime = HAL_GetTick();
+		m_lastCharReceivedTime = m_timebase->getTime_ms();
 
 		if (m_incomingBufferPtr < INCOMING_BUFFER_SIZE)
 			m_incomingBuffer[m_incomingBufferPtr++] = new_char;
@@ -59,10 +59,10 @@ namespace MessageHandling
 		if (m_state != IDLE)
 		{
 			// check for timeout in transmission
-			if (HAL_GetTick() < m_lastCharReceivedTime)
+			if (m_timebase->getTime_ms() < m_lastCharReceivedTime)
 				// clock has rolled over, neglect potential timeout
-				m_lastCharReceivedTime = HAL_GetTick();
-			else if ((HAL_GetTick() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
+				m_lastCharReceivedTime = m_timebase->getTime_ms();
+			else if ((m_timebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
 			{
 				theLogger.logString(warning, "Serial packet timed out before completion, discarding");
 				m_state = IDLE;
@@ -122,7 +122,7 @@ namespace MessageHandling
 						// we have received the stop sequence, message is complete
 						Message msg;
 						msg.loadFromBytes(m_candidateMessageLength - STOP_SEQUENCE_LENGTH, m_candidateMessage);
-						theMessageHandler.loadIncomingMessage(msg);
+						m_messageHandler->loadIncomingMessage(msg);
 
 						theLogger.logString(debug, std::string("Received stop sequence, processing message"));
 

@@ -11,9 +11,7 @@
 
 extern Logging::Logger theLogger;
 
-// TODO: Redo message class without raw pointers/memory management (use vectors instead)
-// For toByteArray, which is used by the output gateway to prepare the raw byte array to
-// send to the UART, will need to take in the vector and move the raw bytes
+// TODO: Add message ID and timestamp field
 
 namespace MessageHandling
 {
