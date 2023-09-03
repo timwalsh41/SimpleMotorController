@@ -52,8 +52,8 @@ TEST_F(CurrentSensorTest, StandardInsertSingleBuffer) {
   
   m_sensor.clearStorageBuffer();
   
-  uint8_t msgBytes[] = {0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
-  EXPECT_TRUE(msg.loadFromBytes(5, msgBytes));
+  std::vector<uint8_t> msgBytes{0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
+  EXPECT_TRUE(msg.loadFromBytes(msgBytes, 0));
   EXPECT_FALSE(msg.checkCRC());
   
   // For this to work, we need to request data (dataLength_ms) that is less than a full measurement buffer, equal to 
@@ -114,8 +114,8 @@ TEST_F(CurrentSensorTest, StandardInsertWrapBuffer) {
         startValue += Sensors::CURRENT_SENSOR_BUFFER_SIZE/Sensors::CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT;
     }
     
-    uint8_t msgBytes[] = {0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
-    EXPECT_TRUE(msg.loadFromBytes(5, msgBytes));
+    std::vector<uint8_t> msgBytes{0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
+    EXPECT_TRUE(msg.loadFromBytes(msgBytes, 0));
     EXPECT_FALSE(msg.checkCRC());
     
     std::vector<uint8_t> measurements{};
@@ -143,8 +143,8 @@ TEST_F(CurrentSensorTest, FloatInsertSingleBuffer) {
   
   m_sensor.clearStorageBuffer();
   
-  uint8_t msgBytes[] = {0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
-  EXPECT_TRUE(msg.loadFromBytes(5, msgBytes));
+  std::vector<uint8_t> msgBytes{0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
+  EXPECT_TRUE(msg.loadFromBytes(msgBytes, 0));
   EXPECT_FALSE(msg.checkCRC());
   
   // For this to work, we need to request data (dataLength_ms) that is less than a full measurement buffer, equal to 

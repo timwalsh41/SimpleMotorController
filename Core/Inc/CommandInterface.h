@@ -13,8 +13,8 @@
 #include "stdint.h"
 
 // Message start and stop sequences
-constexpr char START_SEQUENCE[] = {'Q', 'R', 'S', 'T'};
-constexpr char STOP_SEQUENCE[] = {'M', 'N', 'O', 'P'};
+constexpr char START_SEQUENCE[] = {'R', 'U', 'S', 'T'};
+constexpr char STOP_SEQUENCE[] = {'S', 'T', 'O', 'P'};
 
 constexpr size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE)/sizeof(char);
 constexpr size_t STOP_SEQUENCE_LENGTH = sizeof(STOP_SEQUENCE)/sizeof(char);

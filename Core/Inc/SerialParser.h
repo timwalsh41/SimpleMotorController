@@ -12,6 +12,9 @@
 #include "CommandInterface.h"
 #include "ITimebase.h"
 #include "IMessageHandler.h"
+#include <queue>
+#include <deque>
+#include <vector>
 
 namespace MessageHandling
 {
@@ -50,14 +53,9 @@ namespace MessageHandling
 		uint32_t m_messageLength;
 		uint8_t* m_pMessage{nullptr};
 
-		uint8_t m_incomingBufferPtr{0};
-		uint8_t m_incomingBuffer[INCOMING_BUFFER_SIZE];
-
-		uint8_t m_startSequenceCandidate[START_SEQUENCE_LENGTH];
-		uint8_t m_startSequenceCandidateLength{0};
-
-		uint8_t m_candidateMessage[MAX_INCOMING_MESSAGE_LENGTH];
-		uint32_t m_candidateMessageLength{0};
+		std::queue<uint8_t> m_incomingBuffer{};
+		std::deque<uint8_t> m_startSequenceCandidate{};
+		std::vector<uint8_t> m_candidateMessage{};
 
 		uint32_t m_lastCharReceivedTime{0};
 	};

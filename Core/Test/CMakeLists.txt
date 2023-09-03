@@ -36,7 +36,6 @@ add_executable(
   SerialParserTest
   SerialParserTest.cpp
   MockLogger.cpp
-  #../Src/MockMessageHandler.cpp
   ../Src/TestTimebase.cpp
   ../Src/Message.cpp
   ../Src/SerialParser.cpp

@@ -5,7 +5,6 @@
  *      Author: tim
  */
 
-#include "stm32l4xx_hal.h"
 #include "Utility.h"
 
 namespace Utility
@@ -16,7 +15,7 @@ namespace Utility
 	void delayCycles(uint32_t numCycles)
 	{
 		for (uint32_t i = 0; i < numCycles; ++i)
-			__NOP();
+			__asm volatile ("nop");
 	}
 
 } /* namespace Utility */

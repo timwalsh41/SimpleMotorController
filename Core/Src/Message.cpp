@@ -48,28 +48,34 @@ namespace MessageHandling
 
 	}
 
-	bool Message::loadFromBytes(uint8_t message_length, const uint8_t* const raw_message)
+	// extract message from raw bytes from serial parser; note these raw bytes may include the stop
+	// sequence, which we'll extract by dropping the last ignoreLength bytes from the raw message
+	bool Message::loadFromBytes(const std::vector<uint8_t>& raw_message, const size_t ignoreLength)
 	{
-		uint8_t payloadLength;
+		int payloadLength;
 		m_payload.clear();
 
-		if (message_length < MINIMUM_MESSAGE_LENGTH)
+		if (raw_message.size() < MINIMUM_MESSAGE_LENGTH + ignoreLength)
 		{
 			theLogger.logString(warning, "Received message less than the minimum length");
 			return false;
 		}
 
 		m_commandCode = raw_message[0];
-		payloadLength = message_length - 3;
+		payloadLength = raw_message.size() - MINIMUM_MESSAGE_LENGTH - ignoreLength;
 
-		if (payloadLength)
+		if (payloadLength > 0)
 		{
 			m_payload.reserve(payloadLength);
-			m_payload.insert(m_payload.begin(), &raw_message[1], &raw_message[1+payloadLength]);
+			// copy in payload, which runs from the second byte (the one after the command code) to the end minus
+			// the ignore length (stop sequence length) plus minimum message length (CRC + command code) minus one
+			// byte for command code
+			m_payload.insert(m_payload.begin(), raw_message.begin() + 1, raw_message.end() - ignoreLength - MINIMUM_MESSAGE_LENGTH + 1);
 		}
 
 		// TODO: make sure endianness is correct here
-		std::memcpy(&m_crc, &raw_message[message_length-2], 2);
+		// Now grab the CRCC
+		std::memcpy(&m_crc, &raw_message.data()[raw_message.size() - ignoreLength - 2], 2);
 		return true;
 	}
 

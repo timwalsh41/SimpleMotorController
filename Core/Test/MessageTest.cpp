@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <Message.h>
 #include <stdint.h>
+#include <vector>
 #include <iostream>
 #include <ios>
 
@@ -44,39 +45,39 @@ uint16_t calculate_crc(uint8_t* bytes, uint16_t len)
 TEST(MessageTest, LoadRawBytesAndCrc) {
   
   MessageHandling::Message msg;
-  uint8_t msgBytesTooShort[] = {0x22, 0x23};
+  std::vector<uint8_t> msgBytesTooShort{0x22, 0x23};
   
   // Message too short
-  EXPECT_FALSE(msg.loadFromBytes(2, msgBytesTooShort));
+  EXPECT_FALSE(msg.loadFromBytes(msgBytesTooShort, 0));
   
-  // Successful load, bad CRC
-  uint8_t msgBytes[] = {0x22, 0x23, 0x24, 0x25};
-  EXPECT_TRUE(msg.loadFromBytes(4, msgBytes));
+  // Successful load, bad CRC, with ignored bytes at end
+  std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29};
+  EXPECT_TRUE(msg.loadFromBytes(msgBytes, 4));
   EXPECT_FALSE(msg.checkCRC());
   
   // successful load, correct CRC
   // Note in debug mode, we just use a fixed CRC of 0x6261; this code checks
   // release mode operation with the true CRC calculation
-  uint16_t crc = calculate_crc(msgBytes, 2);
+  uint16_t crc = calculate_crc(msgBytes.data(), 2);
   
   msgBytes[2] = static_cast<uint8_t>(crc & 0xFF);
   msgBytes[3] = static_cast<uint8_t>((crc >> 8) & 0xFF);
-  EXPECT_TRUE(msg.loadFromBytes(4, msgBytes));
+  EXPECT_TRUE(msg.loadFromBytes(msgBytes, 4));
   EXPECT_TRUE(msg.checkCRC());
   
   // verify set CRC function behaves as expected
   msgBytes[2] = 0x24;
   msgBytes[3] = 0x25;
-  EXPECT_TRUE(msg.loadFromBytes(4, msgBytes));
+  EXPECT_TRUE(msg.loadFromBytes(msgBytes, 4));
   msg.setCRC();
   EXPECT_TRUE(msg.checkCRC());
 }
 
 TEST(MessageTest, MessageParsing) {
     MessageHandling::Message msg;
-    uint8_t msgBytes[] = {0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+    std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
-    msg.loadFromBytes(7, msgBytes);
+    msg.loadFromBytes(msgBytes, 0);
     msg.setCRC();
     
     // verify first byte is loaded as command code
@@ -101,9 +102,9 @@ TEST(MessageTest, MessageParsing) {
 
 TEST(MessageTest, PayloadManipulation) {
     MessageHandling::Message msg;
-    uint8_t msgBytes[] = {0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+    std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
-    msg.loadFromBytes(7, msgBytes);
+    msg.loadFromBytes(msgBytes, 0);
     msg.setCRC();
     
     // verify payload is loaded and retrieved properly
@@ -126,9 +127,9 @@ TEST(MessageTest, PayloadManipulation) {
 
 TEST(MessageTest, CopyAndMove) {
     MessageHandling::Message msg;
-    uint8_t msgBytes[] = {0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+    std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
-    msg.loadFromBytes(7, msgBytes);
+    msg.loadFromBytes(msgBytes, 0);
     msg.setCRC();
     
     // copy constructor
@@ -176,12 +177,12 @@ TEST(MessageTest, CopyAndMove) {
 
 TEST(MessageTest, ToByteArray) {
     MessageHandling::Message msg;
-    uint8_t msgBytes[] = {0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
-    uint16_t crc = calculate_crc(msgBytes, 5);
+    std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+    uint16_t crc = calculate_crc(msgBytes.data(), 5);
     msgBytes[5] = static_cast<uint8_t>(crc & 0xFF);
     msgBytes[6] = static_cast<uint8_t>((crc >> 8) & 0xFF);
     
-    msg.loadFromBytes(7, msgBytes);
+    msg.loadFromBytes(msgBytes, 0);
     
     // the toByteArray function checks the CRC, so it needs to be set properly
     msg.setCRC();

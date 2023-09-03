@@ -9,17 +9,27 @@
 #include "Message.h"
 #include "MessageHandler.h"
 #include "Logger.h"
+#include <cstring>
 
 extern Logging::Logger theLogger;
 
 namespace MessageHandling
 {
-
-	bool sequenceMatch(const char* refSequence, const char* compSequence, size_t sequenceLength)
+	template <typename T>
+	bool sequenceMatch(const char* refSequence, T& compSequence, size_t refSequenceLength)
 	{
-		for (size_t i = 0; i < sequenceLength; i++)
-			if (refSequence[i] != compSequence[i])
+		if (refSequenceLength != compSequence.size())
+		{
+			theLogger.logString(warning, "sequenceMatch: size mismatch between reference sequence and candidate sequence");
+			return false;
+		}
+
+		size_t i = 0;
+		for (uint8_t c : compSequence)
+		{
+			if (refSequence[i++] != c)
 				return false;
+		}
 
 		return true;
 	}
@@ -28,7 +38,7 @@ namespace MessageHandling
 			m_timebase(timebase),
 			m_messageHandler(messageHandler)
 	{
-
+		m_candidateMessage.reserve(MAX_INCOMING_MESSAGE_LENGTH/4);
 	}
 
 	SerialParser::~SerialParser()
@@ -42,12 +52,14 @@ namespace MessageHandling
 	{
 		m_lastCharReceivedTime = m_timebase->getTime_ms();
 
-		if (m_incomingBufferPtr < INCOMING_BUFFER_SIZE)
-			m_incomingBuffer[m_incomingBufferPtr++] = new_char;
+		if (m_incomingBuffer.size() <= INCOMING_BUFFER_SIZE)
+			m_incomingBuffer.push(new_char);
 		else
 		{
 			theLogger.logString(error, "Input serial buffer overflow, discarding buffer");
-			m_incomingBufferPtr = 0;
+
+			// clear the incoming buffer queue
+			m_incomingBuffer = {};
 		}
 	}
 
@@ -55,23 +67,24 @@ namespace MessageHandling
 	{
 		uint8_t new_char;
 		std::string logString;
+		std::vector<uint8_t> stopSequenceCandidate{};
+		stopSequenceCandidate.reserve(STOP_SEQUENCE_LENGTH);
 
-		if (m_state != IDLE)
+		// check for timeout in transmission
+		if (m_timebase->getTime_ms() < m_lastCharReceivedTime)
+			// clock has rolled over, neglect potential timeout
+			m_lastCharReceivedTime = m_timebase->getTime_ms();
+		else if ((m_timebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
 		{
-			// check for timeout in transmission
-			if (m_timebase->getTime_ms() < m_lastCharReceivedTime)
-				// clock has rolled over, neglect potential timeout
-				m_lastCharReceivedTime = m_timebase->getTime_ms();
-			else if ((m_timebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
-			{
-				theLogger.logString(warning, "Serial packet timed out before completion, discarding");
-				m_state = IDLE;
-			}
+			theLogger.logString(warning, "Serial packet timed out before completion, discarding");
+			m_incomingBuffer = {};
+			m_state = IDLE;
 		}
 
-		for (size_t bufferIdx = 0; bufferIdx < m_incomingBufferPtr; bufferIdx++)
+		while (!m_incomingBuffer.empty())
 		{
-			new_char = m_incomingBuffer[bufferIdx];
+			new_char = m_incomingBuffer.front();
+			m_incomingBuffer.pop();
 
 			// C++ seems to be happiest when we append a char to a string using
 			// the push_back method
@@ -82,62 +95,59 @@ namespace MessageHandling
 			switch(m_state)
 			{
 			case IDLE:
-				m_startSequenceCandidate[0] = new_char;
-				m_startSequenceCandidateLength = 1;
+				m_startSequenceCandidate.clear();
+				m_startSequenceCandidate.push_back(new_char);
 				m_state = STARTING;
 				break;
 
 			case STARTING:
-				m_startSequenceCandidate[m_startSequenceCandidateLength++] = new_char;
-				if (m_startSequenceCandidateLength == START_SEQUENCE_LENGTH)
+				m_startSequenceCandidate.push_back(new_char);
+				if (m_startSequenceCandidate.size() == START_SEQUENCE_LENGTH)
 				{
-					if (sequenceMatch(START_SEQUENCE, (const char*) m_startSequenceCandidate, START_SEQUENCE_LENGTH))
+					if (sequenceMatch(START_SEQUENCE, m_startSequenceCandidate, START_SEQUENCE_LENGTH))
 					{
 						// we have matched the start sequence, move to RECEIVING state
 						theLogger.logString(debug, std::string("Received start sequence"));
 						m_state = RECEIVING;
-						m_startSequenceCandidateLength = 0;
+						m_startSequenceCandidate.clear();
 					}
 					else
 					{
-						// shift the rightmost N-1 characters to the left
-						for (size_t i = 0; i < START_SEQUENCE_LENGTH-1; i++)
-							m_startSequenceCandidate[i] = m_startSequenceCandidate[i+1];
-
-						--m_startSequenceCandidateLength;
+						// remove first character and wait for next one to arrive
+						m_startSequenceCandidate.pop_front();
 					}
 				}
 
 				break;
 
 			case RECEIVING:
-				m_candidateMessage[m_candidateMessageLength++] = new_char;
+				m_candidateMessage.push_back(new_char);
 
-				if (m_candidateMessageLength >= STOP_SEQUENCE_LENGTH)
+				if (m_candidateMessage.size() >= STOP_SEQUENCE_LENGTH)
 				{
-					if (sequenceMatch(STOP_SEQUENCE, \
-									  (const char*) &m_candidateMessage[m_candidateMessageLength - STOP_SEQUENCE_LENGTH], \
-									  STOP_SEQUENCE_LENGTH))
+					stopSequenceCandidate.insert(stopSequenceCandidate.end(), m_candidateMessage.end()-4, m_candidateMessage.end());
+					if (sequenceMatch(STOP_SEQUENCE, stopSequenceCandidate, STOP_SEQUENCE_LENGTH))
 					{
 						// we have received the stop sequence, message is complete
 						Message msg;
-						msg.loadFromBytes(m_candidateMessageLength - STOP_SEQUENCE_LENGTH, m_candidateMessage);
+						msg.loadFromBytes(m_candidateMessage, STOP_SEQUENCE_LENGTH);
 						m_messageHandler->loadIncomingMessage(msg);
 
 						theLogger.logString(debug, std::string("Received stop sequence, processing message"));
 
 						// we are finished receiving the current message so return to IDLE
 						m_state = IDLE;
-						m_candidateMessageLength = 0;
+						m_candidateMessage.clear();
 						break;
 					}
+					stopSequenceCandidate.clear();
 				}
-				else if (m_candidateMessageLength == MAX_INCOMING_MESSAGE_LENGTH)
+				else if (m_candidateMessage.size() == MAX_INCOMING_MESSAGE_LENGTH)
 				{
 					// we have reached the maximum message length without hitting the stop
 					// sequence; discard the message and start over
 					m_state = IDLE;
-					m_candidateMessageLength = 0;
+					m_candidateMessage.clear();
 
 					theLogger.logString(error, "Incoming message overflow");
 				}
@@ -147,12 +157,11 @@ namespace MessageHandling
 			default:
 				theLogger.logString(error, "SerialParser in invalid state, resetting to idle");
 				m_state = IDLE;
-				m_candidateMessageLength = 0;
+				m_candidateMessage.clear();
 				break;
 			}
 		}
-
-		m_incomingBufferPtr = 0;
+		m_incomingBuffer = {};
 	}
 
 } /* namespace MessageHandling */

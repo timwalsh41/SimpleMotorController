@@ -12,9 +12,14 @@
 #include <chrono>
 #include <thread>
 
+TestTimebase::TestTimebase()
+{
+	m_zeroTime = std::chrono::steady_clock::now();
+}
+
 unsigned long TestTimebase::getTime_ms()
 {
-	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_zeroTime).count();
 }
 
 void TestTimebase::delay_ms(unsigned long delayTime_ms)

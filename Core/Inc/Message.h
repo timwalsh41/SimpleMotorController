@@ -9,6 +9,7 @@
 #define INC_MESSAGE_H_
 
 #include "stdint.h"
+#include <cstddef>  // required for gtest build to find size_t
 #include <vector>
 
 namespace MessageHandling
@@ -33,7 +34,7 @@ namespace MessageHandling
 		Message& operator=(const Message& other);
 		Message& operator=(Message&& other) noexcept;
 
-		bool loadFromBytes(uint8_t payload_length, const uint8_t* const raw_message);
+		bool loadFromBytes(const std::vector<uint8_t>& raw_message, const size_t ignoreLength);
 		bool checkCRC() const;
 		void setCRC();
 		uint8_t getCommandCode() const { return m_commandCode; }
