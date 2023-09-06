@@ -41,6 +41,7 @@ namespace MotorControl
 		uint16_t getMaxDutyCycle() const { return m_motorDriver.getMaxDutyCycle(); }
 
 		uint32_t getState() const { return m_state->getId(); }
+		uint32_t getTimeInState() const { return m_state->timeInState(); }
 		bool isDriverSleeping() const { return m_motorDriver.isDriverSleeping(); }
 		bool isDriverFaulted() const { return m_motorDriver.isDriverFaulted(); }
 

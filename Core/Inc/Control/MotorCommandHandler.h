@@ -24,6 +24,10 @@ public:
 	bool getMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool getMotorSpeed(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool getMotorDirection(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool rampMotorOn(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool rampMotorOff(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool setMaxDutyCycle(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool injectFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 private:
 	Controller* m_pController{nullptr};
 };

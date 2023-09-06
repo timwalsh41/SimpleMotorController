@@ -23,6 +23,7 @@ namespace Logging
 	class Logger {
 	public:
 		void logString(LogLevel level, const std::string& msg);
+		bool logMessagesPending();
 	};
 
 } // namespace Logging

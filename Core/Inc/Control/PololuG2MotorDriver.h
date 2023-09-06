@@ -16,6 +16,12 @@ namespace MotorControl
 	constexpr uint16_t CURRENT_RAW_TO_MILLIAMP = 1;
 	constexpr int32_t DEFAULT_MAX_DUTY_CYCLE = 1200;
 
+	// This value must match the setting in CubeMX for TIM2 counter period
+	constexpr int32_t DUTY_CYCLE_MAX_LIMIT = 1600;
+
+	// the minimum value we'll allow for the max duty cycle setting
+	constexpr int32_t DUTY_CYCLE_MAX_MIN_LIMIT = 400;
+
 	// we will zero the encoder counter at this value, and then subtract off this
 	// offset to report a value centered at zero
 	constexpr int32_t ENCODER_ZERO_COUNT = 1073741824;
@@ -46,10 +52,12 @@ namespace MotorControl
 		bool isDriverFaulted() const;
 
 		void setPwmDutyCycle(int32_t dutyCycle);
-		int32_t getPwmDutyCycle() const { return m_dutyCycle; }
+		int32_t getPwmDutyCycle() const;
 
-		void setMaxDutyCycle(uint16_t maxDutyCycle) { m_maxDutyCycle = static_cast<int32_t>(maxDutyCycle); }
-		uint16_t getMaxDutyCycle() const { return static_cast<uint16_t>(m_maxDutyCycle); }
+		// set maximum duty cycle in percent of the limit; we actually pass the value
+		// in tenths of a percent
+		void setMaxDutyCycle(uint16_t maxDutyCycle_pct);
+		uint16_t getMaxDutyCycle() const;
 
 		int32_t getEncoderCounts() const { return m_encoderCount; }
 		float getShaftRotationCount() const;

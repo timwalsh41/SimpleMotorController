@@ -279,6 +279,7 @@ namespace MotorControl
 
 		Ramp::~Ramp()
 		{
+
 		}
 
 		std::unique_ptr<MotorControlState> Ramp::handleEvent(MotorEvent event)

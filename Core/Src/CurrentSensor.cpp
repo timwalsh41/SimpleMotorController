@@ -9,7 +9,6 @@
 #include "Logger.h"
 #include <cstring>
 #include <algorithm>
-#include <iostream>
 
 extern Logging::Logger theLogger;
 
@@ -78,13 +77,14 @@ namespace Sensors
 	{
 		// motor current request has a two byte payload equal to the number of milliseconds of data to send
 		if (msg.getPayload().size() != 2)
+		{
+			theLogger.logString(error, "Invalid payload in getMotorCurrent command");
 			return false;
+		}
 
 		// retrieve the desired number of milliseconds of data from the payload
 		uint16_t millisecondsOfData{0};
 		std::memcpy(&millisecondsOfData, msg.getPayload().data(), 2);
-
-		std::cout << "Number of milliseconds of data (desired) = " << millisecondsOfData << "\n";
 
 		// TODO: this relies on system tick time being one millisecond
 		int numDataPoints = static_cast<int32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
@@ -111,11 +111,6 @@ namespace Sensors
 		payload.push_back(static_cast<uint8_t>((millisecondsOfData >> 8) & 0xFF));
 		payload.push_back(static_cast<uint8_t>(millisecondsOfData & 0xFF));
 
-		std::cout << "Number of milliseconds of data (actual) = " << millisecondsOfData << "\n";
-		std::cout << "Number of measurement data points = " << numDataPoints << "\n";
-		std::cout << "Number of bytes = " << numDataPoints*sizeof(float) << "\n";
-		std::cout << "Storage pointer offset: " << m_storageBufferPtr - m_storageBuffer.begin() << "\n";
-
 		uint8_t transferBuffer[sizeof(float)];
 
 		// To actually copy data into the payload, recall that we are always sending the most recent numDataPoints
@@ -133,8 +128,6 @@ namespace Sensors
 		{
 			// to wrap buffer, we'll first find the number of data points we need from the end of the buffer
 			int valuesAtEndOfBuffer = numDataPoints - (m_storageBufferPtr - m_storageBuffer.begin());
-
-			std::cout << "Wrapping buffer, grabbing " << valuesAtEndOfBuffer << " points from the end\n";
 
 			// grab points at the end and insert into payload
 			for (auto it = m_storageBuffer.end() - valuesAtEndOfBuffer; it != m_storageBuffer.end(); ++it)

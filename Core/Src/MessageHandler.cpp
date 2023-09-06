@@ -8,11 +8,13 @@
 #include "MessageHandler.h"
 #include "CommandInterface.h"
 #include "OutputGateway.h"
+#include "Controller.h"
 #include "MotorCommandHandler.h"
 #include "CurrentSensor.h"
 #include "Logger.h"
 #include "Version.h"
 
+extern MotorControl::Controller theController;
 extern MotorControl::MotorCommandHandler theMotorCommandHandler;
 extern MessageHandling::OutputGateway theOutputGateway;
 extern Sensors::CurrentSensor theCurrentSensor;
@@ -97,6 +99,7 @@ void MessageHandler::processMessages()
 			}
 		}
 
+		// msg has the original command code, we just need to set the ack bit and calculate the CRC
 		msg.setAck();
 		msg.setCRC();
 		theOutputGateway.sendMessage(msg);
@@ -137,9 +140,55 @@ void MessageHandler::buildCommandMap()
 			{
 				return theCurrentSensor.getMotorCurrent(msg, payload);
 			};
-
-
+	m_commandMap[CMD_RAMP_MOTOR_ON] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return theMotorCommandHandler.rampMotorOn(msg, payload);
+			};
+	m_commandMap[CMD_RAMP_MOTOR_OFF] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return theMotorCommandHandler.rampMotorOff(msg, payload);
+			};
+	m_commandMap[CMD_SET_MAX_DC] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return theMotorCommandHandler.setMaxDutyCycle(msg, payload);
+			};
+	m_commandMap[CMD_INJECT_FAULT] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return theMotorCommandHandler.injectFault(msg, payload);
+			};
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
+	m_commandMap[CMD_GET_STATUS] = [](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				// return payload is 8 bytes
+				payload.reserve(8);
+
+				// byte 0: motor controller state
+				payload.push_back(static_cast<uint8_t>(theController.getState()));
+
+				// byte 1: bitmapped status byte
+				uint8_t statusByte{0};
+				statusByte |= (theController.getMotorDirection() ? 1 : 0) << 0;	// bit 0: motor direction
+				statusByte |= (theController.isDriverFaulted() ? 1 : 0) << 1;	// bit 1: driver fault status
+				statusByte |= (theController.isDriverSleeping() ? 1 : 0) << 2;	// bit 2: driver sleep status
+				statusByte |= (theLogger.logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
+				payload.push_back(statusByte);
+
+				// bytes 2-3: motor drive level (tenths of a percent)
+				// TODO: verify endianness
+				uint16_t driveLevel = theController.getMotorPwmLevel();
+				payload.push_back(static_cast<uint8_t>((driveLevel >> 0) & 0xFF));
+				payload.push_back(static_cast<uint8_t>((driveLevel >> 8) & 0xFF));
+
+				// bytes 4-7: time in current state (ms)
+				// TODO: verify endianness
+				uint32_t timeInState = theController.getTimeInState();
+				payload.push_back(static_cast<uint8_t>((timeInState >> 0) & 0xFF));
+				payload.push_back(static_cast<uint8_t>((timeInState >> 8) & 0xFF));
+				payload.push_back(static_cast<uint8_t>((timeInState >> 16) & 0xFF));
+				payload.push_back(static_cast<uint8_t>((timeInState >> 24) & 0xFF));
+
+				return true;
+			};
 }
 
 } /* namespace MessageHandling */

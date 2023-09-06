@@ -18,4 +18,11 @@ namespace Logging
 		theOutputGateway.logString(level, msg);
 	}
 
+	// return true if there are log messages pending for the host to retrieve
+	bool Logger::logMessagesPending()
+	{
+		// TODO: implement this function
+		return false;
+	}
+
 } // namespace Logging
