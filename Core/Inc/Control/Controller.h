@@ -11,6 +11,7 @@
 #include <memory>
 #include "MotorControlState.h"
 #include "PololuG2MotorDriver.h"
+#include "ILogger.h"
 
 namespace MotorControl
 {
@@ -59,6 +60,8 @@ namespace MotorControl
 		float m_pMotorSpeedBuffer[VELOCITY_BUFFER_SIZE];
 		uint32_t m_speedBufferIdx{0};
 		int32_t m_lastEncoderCount{0};
+
+		std::shared_ptr<Logging::ILogger> m_pLogger;
 	};
 
 } /* namespace MotorControl */

@@ -5,11 +5,12 @@
  *      Author: tim
  */
 
-#include <cstring>
-#include "Message.h"
-#include "Logger.h"
 
-extern Logging::Logger theLogger;
+#include "Message.h"
+#include "ILogger.h"
+#include "SingletonFactory.h"
+#include <cstring>
+#include <memory>
 
 // TODO: Add message ID and timestamp field
 
@@ -18,7 +19,8 @@ namespace MessageHandling
 
 	Message::Message()
 	{
-
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
 	}
 
 	Message::Message(const Message& other) :
@@ -35,7 +37,7 @@ namespace MessageHandling
 			m_commandCode{other.m_commandCode},
 			m_crc{other.m_crc}
 	{
-		// theLogger.logString(debug, "Move construction of Message");
+		// m_pLogger->logString(debug, "Move construction of Message");
 
 		if (!other.m_payload.empty())
 		{
@@ -57,7 +59,7 @@ namespace MessageHandling
 
 		if (raw_message.size() < MINIMUM_MESSAGE_LENGTH + ignoreLength)
 		{
-			theLogger.logString(warning, "Received message less than the minimum length");
+			m_pLogger->logString(warning, "Received message less than the minimum length");
 			return false;
 		}
 
@@ -166,7 +168,7 @@ namespace MessageHandling
 		if (&other == this)
 			return *this;
 
-		// theLogger.logString(debug, std::string("Move assignment of Message"));
+		// m_pLogger->logString(debug, std::string("Move assignment of Message"));
 
 		m_commandCode = other.m_commandCode;
 		m_crc = other.m_crc;
@@ -188,7 +190,7 @@ namespace MessageHandling
 		if (!checkCRC())
 		{
 			length = 0;
-			theLogger.logString(error, "Unable to serialize message, CRC mismatch");
+			m_pLogger->logString(error, "Unable to serialize message, CRC mismatch");
 			return false;
 		}
 
@@ -199,7 +201,7 @@ namespace MessageHandling
 
 		if (message == nullptr)
 		{
-			theLogger.logString(error, "Unable to serialize message, cannot allocate memory for byte array");
+			m_pLogger->logString(error, "Unable to serialize message, cannot allocate memory for byte array");
 			return false;
 		}
 

@@ -10,13 +10,15 @@
 
 #include "Controller.h"
 #include "Message.h"
+#include "ILogger.h"
 #include <vector>
+#include <memory>
 
 namespace MotorControl {
 
 class MotorCommandHandler {
 public:
-	MotorCommandHandler(Controller* controller) : m_pController{controller} {}
+	MotorCommandHandler(std::shared_ptr<Controller>& pController);
 	bool enableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool disableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool sleepDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
@@ -29,7 +31,8 @@ public:
 	bool setMaxDutyCycle(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool injectFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 private:
-	Controller* m_pController{nullptr};
+	std::shared_ptr<Controller> m_pController;
+	std::shared_ptr<Logging::ILogger> m_pLogger;
 };
 
 } /* namespace MotorControl */

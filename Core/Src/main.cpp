@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "SingletonFactory.h"
 #include "SerialParser.h"
 #include "OutputGateway.h"
 #include "MessageHandler.h"
@@ -30,6 +31,9 @@
 #include "STM32Timebase.h"
 #include "Version.h"
 #include "Utility.h"
+#include "ILogger.h"
+#include "Logger.h"
+#include <memory>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -72,15 +76,6 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint8_t UartRcvBuffer;
 
-STM32Timebase timebase;
-OutputGateway theOutputGateway;
-MessageHandler theMessageHandler;
-SerialParser theSerialParser(&timebase, &theMessageHandler);
-CurrentSensor theCurrentSensor;
-Controller theController;
-MotorCommandHandler theMotorCommandHandler(&theController);
-Logger theLogger;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -111,6 +106,27 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint32_t mainLoopTimer = 0;
   uint32_t ledTimer = 0;
+
+  SingletonFactory factory;
+
+  std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, STM32Timebase>();
+
+  // create the logging singleton as that is accessed by all other objects
+  std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logger>();
+
+  // Output gateway, current sensor, and controller only requires the logger
+  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>();
+  std::shared_ptr<CurrentSensor> pCurrentSensor = factory.create<CurrentSensor>();
+  std::shared_ptr<Controller> pController = factory.create<Controller>();
+
+  // command handler requires logger and controller
+  MotorCommandHandler theMotorCommandHandler(pController);
+
+  // Message handler requires everything (logger, gateway, controller, current sensor, motor command handler)
+  MessageHandler theMessageHandler;
+
+  // serial parser requires logger and message handler
+  std::shared_ptr<SerialParser> pSerialParser = factory.create<SerialParser>(&theMessageHandler);
 
   /* USER CODE END 1 */
 
@@ -143,7 +159,7 @@ int main(void)
 
   // start ADC acquisitions
   HAL_TIM_Base_Start(&htim6);
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, pCurrentSensor->getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 
   HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
 
@@ -154,7 +170,7 @@ int main(void)
 		  	  	  	  	  	  std::to_string(version[0]) + "." + \
 							  std::to_string(version[1]) + "." + \
 							  std::to_string(version[2]);
-  theOutputGateway.logString(info, welcomeString);
+  pOutputGateway->addLogString(welcomeString);
 #endif
 
 
@@ -173,10 +189,11 @@ int main(void)
 
 	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
 	{
-		theSerialParser.ProcessIncomingData();
+		pSerialParser->ProcessIncomingData();
 		theMessageHandler.processMessages();
-		theOutputGateway.processOutgoingMessages();
-		theCurrentSensor.processCurrentMeasurements();
+		pOutputGateway->processOutgoingMessages();
+		pCurrentSensor->processCurrentMeasurements();
+		pController->tick();
 
 		mainLoopTimer = HAL_GetTick();
 
@@ -685,31 +702,42 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	theSerialParser.ReceiveChar(UartRcvBuffer);
+	SingletonFactory factory;
+	auto pSerialParser = factory.retrieve<SerialParser>();
+	pSerialParser->ReceiveChar(UartRcvBuffer);
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
+	SingletonFactory factory;
+	auto pOutputGateway = factory.retrieve<OutputGateway>();
+
 	HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
-	theOutputGateway.setReceiving();
+	pOutputGateway->setReceiving();
 }
 
 // Called when ADC DMA buffer is completely filled
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
+  SingletonFactory factory;
+  auto pCurrentSensor = factory.retrieve<CurrentSensor>();
+
   // hand off current sensor buffer
-  theCurrentSensor.swapBuffer();
+  pCurrentSensor->swapBuffer();
 
   // restart the measurement with the new buffer
-  HAL_ADC_Start_DMA(&hadc1, theCurrentSensor.getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
+  HAL_ADC_Start_DMA(&hadc1, pCurrentSensor->getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	SingletonFactory factory;
+	auto pController = factory.retrieve<Controller>();
+
 	// TODO: test that this actually works
 	if (GPIO_Pin == FLT__Pin)
 		if (HAL_GPIO_ReadPin(FLT__GPIO_Port, FLT__Pin) == GPIO_PIN_RESET)
-			theController.motorFault();
+			pController->motorFault();
 }
 
 /* USER CODE END 4 */

@@ -1,49 +1,64 @@
 #include <gtest/gtest.h>
 #include <Message.h>
+#include <SingletonFactory.h>
+#include <ILogger.h>
+#include <MockLogger.h>
+#include <TestTimebase.h>
 #include <stdint.h>
 #include <vector>
 #include <iostream>
 #include <ios>
+#include <memory>
 
-// Calculate CRC16 for the input byte array, set the two byte response
-// in the provided crc pointer
-// Uses CRC-CCITT polynomial (0x1021)
-// Reference:
-// https://en.wikipedia.org/wiki/Computation_of_cyclic_redundancy_checks#Bit_ordering_(endianness)
-// Useful CRC calculator to validate code:
-// http://www.zorc.breitbandkatze.de/crc.html
-uint16_t calculate_crc(uint8_t* bytes, uint16_t len)
+class MessageTest : public ::testing::Test
 {
-    uint16_t rem = 0;
+    protected:
+        void SetUp() override
+        {
+            SingletonFactory factory;            
+            std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
+            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+        }
+        
+        // Calculate CRC16 for the input byte array, set the two byte response
+        // in the provided crc pointer
+        // Uses CRC-CCITT polynomial (0x1021)
+        // Reference:
+        // https://en.wikipedia.org/wiki/Computation_of_cyclic_redundancy_checks#Bit_ordering_(endianness)
+        // Useful CRC calculator to validate code:
+        // http://www.zorc.breitbandkatze.de/crc.html
+        uint16_t calculate_crc(uint8_t* bytes, uint16_t len)
+        {
+            uint16_t rem = 0;
 
-	auto processWord = [](uint16_t rem, uint8_t byte)
-	{
-		rem ^= static_cast<uint16_t>(byte) << 8;
+	        auto processWord = [](uint16_t rem, uint8_t byte)
+	        {
+		        rem ^= static_cast<uint16_t>(byte) << 8;
 
-		for (size_t i = 0; i < 8; i++)
-		{
-			if (rem & 0x8000)
-				rem = (rem << 1) ^ 0x1021;
-			else
-				rem = rem << 1;
-		}
+		        for (size_t i = 0; i < 8; i++)
+		        {
+			        if (rem & 0x8000)
+				        rem = (rem << 1) ^ 0x1021;
+			        else
+				        rem = rem << 1;
+		        }
 
-		return rem;
-	};
+		        return rem;
+	        };
 
-	for (size_t i = 0; i < len; ++i)
-	{
-	    std::cout << "Processing byte " << std::hex << static_cast<int>(bytes[i]) << "\n";
-		rem = processWord(rem, bytes[i]);
-	}
+	        for (size_t i = 0; i < len; ++i)
+	        {
+	            std::cout << "Processing byte " << std::hex << static_cast<int>(bytes[i]) << "\n";
+		        rem = processWord(rem, bytes[i]);
+	        }
 
-	return rem;
-}
-
+	        return rem;
+        } 
+};  
 
 // Demonstrate some basic assertions.
-TEST(MessageTest, LoadRawBytesAndCrc) {
-  
+TEST_F(MessageTest, LoadRawBytesAndCrc) {
+
   MessageHandling::Message msg;
   std::vector<uint8_t> msgBytesTooShort{0x22, 0x23};
   
@@ -73,7 +88,7 @@ TEST(MessageTest, LoadRawBytesAndCrc) {
   EXPECT_TRUE(msg.checkCRC());
 }
 
-TEST(MessageTest, MessageParsing) {
+TEST_F(MessageTest, MessageParsing) {
     MessageHandling::Message msg;
     std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
@@ -100,7 +115,7 @@ TEST(MessageTest, MessageParsing) {
     EXPECT_EQ(msg.getCommandCode(), 0x2A);
 }
 
-TEST(MessageTest, PayloadManipulation) {
+TEST_F(MessageTest, PayloadManipulation) {
     MessageHandling::Message msg;
     std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
@@ -125,7 +140,7 @@ TEST(MessageTest, PayloadManipulation) {
     EXPECT_EQ(byte, msg.getPayload().at(0));
 }
 
-TEST(MessageTest, CopyAndMove) {
+TEST_F(MessageTest, CopyAndMove) {
     MessageHandling::Message msg;
     std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     
@@ -175,7 +190,7 @@ TEST(MessageTest, CopyAndMove) {
         EXPECT_EQ(m3.getPayload().at(i), m5.getPayload().at(i));
 }
 
-TEST(MessageTest, ToByteArray) {
+TEST_F(MessageTest, ToByteArray) {
     MessageHandling::Message msg;
     std::vector<uint8_t> msgBytes{0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
     uint16_t crc = calculate_crc(msgBytes.data(), 5);

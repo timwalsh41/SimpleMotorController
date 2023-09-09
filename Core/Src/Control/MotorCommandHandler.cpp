@@ -6,12 +6,16 @@
  */
 
 #include "MotorCommandHandler.h"
-#include "Logger.h"
+#include "SingletonFactory.h"
 #include <cstring>
 
-extern Logging::Logger theLogger;
-
 namespace MotorControl {
+	MotorCommandHandler::MotorCommandHandler(std::shared_ptr<Controller>& pController) :
+			m_pController{pController}
+	{
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
+	}
 
 	bool MotorCommandHandler::enableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
@@ -78,7 +82,7 @@ namespace MotorControl {
 		// byte direction, and two byte ramp time (in ms)
 		if (msg.getPayload().size() != 5)
 		{
-			theLogger.logString(error, "Invalid payload size in ramp motor on command");
+			m_pLogger->logString(error, "Invalid payload size in ramp motor on command");
 			return false;
 		}
 
@@ -87,13 +91,13 @@ namespace MotorControl {
 
 		if (driveLevel > 1000)
 		{
-			theLogger.logString(error, "Invalid drive level size in ramp motor on command: " + std::to_string(driveLevel));
+			m_pLogger->logString(error, "Invalid drive level size in ramp motor on command: " + std::to_string(driveLevel));
 			return false;
 		}
 
 		if (msg.getPayload().data()[2] != 1 && msg.getPayload().data()[2] != 0)
 		{
-			theLogger.logString(error, "Invalid direction in ramp motor on command: " + std::to_string(msg.getPayload().data()[2]));
+			m_pLogger->logString(error, "Invalid direction in ramp motor on command: " + std::to_string(msg.getPayload().data()[2]));
 			return false;
 		}
 
@@ -102,7 +106,7 @@ namespace MotorControl {
 
 		if (rampTime_ms < 25)
 		{
-			theLogger.logString(error, "Invalid ramp time in ramp motor on command: " + std::to_string(rampTime_ms));
+			m_pLogger->logString(error, "Invalid ramp time in ramp motor on command: " + std::to_string(rampTime_ms));
 			return false;
 		}
 
@@ -118,7 +122,7 @@ namespace MotorControl {
 		// the ramp motor off command should have a 2 byte payload for the ramp time in ms
 		if (msg.getPayload().size() != 2)
 		{
-			theLogger.logString(error, "Invalid payload size in ramp motor off command");
+			m_pLogger->logString(error, "Invalid payload size in ramp motor off command");
 			return false;
 		}
 
@@ -127,7 +131,7 @@ namespace MotorControl {
 
 		if (rampTime_ms < 25)
 		{
-			theLogger.logString(error, "Invalid ramp time in ramp motor off command: " + std::to_string(rampTime_ms));
+			m_pLogger->logString(error, "Invalid ramp time in ramp motor off command: " + std::to_string(rampTime_ms));
 			return false;
 		}
 
@@ -141,7 +145,7 @@ namespace MotorControl {
 		// of the duty cycle limit
 		if (msg.getPayload().size() != 2)
 		{
-			theLogger.logString(error, "Invalid payload size in set max duty cycle command");
+			m_pLogger->logString(error, "Invalid payload size in set max duty cycle command");
 			return false;
 		}
 
@@ -150,7 +154,7 @@ namespace MotorControl {
 
 		if (maxDutyCycle_pct > 1000)
 		{
-			theLogger.logString(error, "Invalid duty cycle in set max duty cycle command: " + std::to_string(maxDutyCycle_pct));
+			m_pLogger->logString(error, "Invalid duty cycle in set max duty cycle command: " + std::to_string(maxDutyCycle_pct));
 			return false;
 		}
 

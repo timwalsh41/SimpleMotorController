@@ -12,9 +12,11 @@
 #include "CommandInterface.h"
 #include "ITimebase.h"
 #include "IMessageHandler.h"
+#include "ILogger.h"
 #include <queue>
 #include <deque>
 #include <vector>
+#include <memory>
 
 namespace MessageHandling
 {
@@ -34,21 +36,21 @@ namespace MessageHandling
 		constexpr uint32_t SERIAL_TRANSMISSION_TIMEOUT_TICKS = 50;
 	#endif
 
-	bool sequenceMatch(const char* ref_sequence, const char* comp_sequence, size_t sequenceLength);
-
 	class SerialParser {
 	public:
-		SerialParser(ITimebase* timebase, IMessageHandler* messageHandler);
+		SerialParser(IMessageHandler*);
 		~SerialParser();
-
-		SerialParser(const SerialParser&) = delete;
 
 		void ReceiveChar(uint8_t new_char);
 		void ProcessIncomingData();
 	private:
+		template <typename T>
+		bool sequenceMatch(const char* refSequence, T& compSequence, size_t refSequenceLength);
+
 		ParserState m_state{IDLE};
-		ITimebase* m_timebase{nullptr};
-		IMessageHandler* m_messageHandler{nullptr};
+		std::shared_ptr<ITimebase> m_pTimebase;
+		IMessageHandler* m_pMessageHandler{nullptr};
+		std::shared_ptr<Logging::ILogger> m_pLogger;
 
 		uint32_t m_messageLength;
 		uint8_t* m_pMessage{nullptr};

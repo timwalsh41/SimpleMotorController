@@ -1,22 +1,30 @@
 #include <gtest/gtest.h>
 #include <Message.h>
 #include <CurrentSensor.h>
+#include <TestTimebase.h>
+#include <MockLogger.h>
+#include <SingletonFactory.h>
 #include <stdint.h>
 #include <iostream>
 #include <ios>
 #include <algorithm>
 #include <cstring>
 #include <vector>
+#include <memory>
 
 // calculate the number of times we need to fill the measurement buffer to get a full storage buffer 
 constexpr int numberOfMeasurementBuffersPerStorageBuffer = Sensors::CURRENT_SENSOR_STORAGE_LENGTH/(Sensors::CURRENT_SENSOR_BUFFER_SIZE/Sensors::CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT) + 1;
+
 
 class CurrentSensorTest : public ::testing::Test
 {
     protected:
         void SetUp() override
         {
-
+            SingletonFactory factory;
+            std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
+            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+            m_pSensor = std::make_unique<Sensors::CurrentSensor>();
         }
         
         void LoadData(int startValue, int numSamples, int sampleOffset)
@@ -28,20 +36,20 @@ class CurrentSensorTest : public ::testing::Test
             
             for (size_t i = 0; i < samplesToRun; ++i)
             {
-                m_sensor.getCurrentBuffer()[i] = sampleValue;
+                m_pSensor->getCurrentBuffer()[i] = sampleValue;
                 if (++sampleCount == Sensors::CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT)
                 {
-                    m_sensor.getCurrentBuffer()[i] += sampleOffset;
+                    m_pSensor->getCurrentBuffer()[i] += sampleOffset;
                     sampleCount = 0;
                     ++sampleValue;
                 }
             }
                 
-            m_sensor.swapBuffer();
+            m_pSensor->swapBuffer();
         }
         
-        Sensors::CurrentSensor m_sensor{};
-        MessageHandling::Message msg{};
+        MessageHandling::Message msg;
+        std::unique_ptr<Sensors::CurrentSensor> m_pSensor;
 };
 
 // Test case - load up the measurement buffer with a single batch and then retrieve it without having to wrap the storage buffer to
@@ -50,7 +58,7 @@ TEST_F(CurrentSensorTest, StandardInsertSingleBuffer) {
   unsigned int dataLength_ms = 1;
   int numberOfDataPoints = dataLength_ms*Sensors::CURRENT_SENSOR_MEASUREMENTS_PER_TICK*sizeof(float);
   
-  m_sensor.clearStorageBuffer();
+  m_pSensor->clearStorageBuffer();
   
   std::vector<uint8_t> msgBytes{0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
   EXPECT_TRUE(msg.loadFromBytes(msgBytes, 0));
@@ -64,10 +72,10 @@ TEST_F(CurrentSensorTest, StandardInsertSingleBuffer) {
   // The exact amount of data loaded is relevant since we need to know what the most recent data received is for checking
   // it below
   LoadData(0, Sensors::CURRENT_SENSOR_BUFFER_SIZE, 0);
-  m_sensor.processCurrentMeasurements();
+  m_pSensor->processCurrentMeasurements();
   
   std::vector<uint8_t> measurements{};
-  EXPECT_TRUE(m_sensor.getMotorCurrent(msg, measurements));
+  EXPECT_TRUE(m_pSensor->getMotorCurrent(msg, measurements));
   EXPECT_EQ(measurements.size(), numberOfDataPoints + 2);
   
   // Now we'll check the values in the buffer. For each measurement, we need to convert from 4 bytes to float, which we'll accomplish with
@@ -99,7 +107,7 @@ TEST_F(CurrentSensorTest, StandardInsertWrapBuffer) {
     int initialSampleValue = maxStorageBufferValue - dataLength_ms*Sensors::CURRENT_SENSOR_MEASUREMENTS_PER_TICK + 1;
     std::cout << "Initial buffer value = " << initialSampleValue << "\n";
  
-    m_sensor.clearStorageBuffer();
+    m_pSensor->clearStorageBuffer();
 
     std::cout << "Measurement buffer size (in filtered storage buffer data points) = " << Sensors::CURRENT_SENSOR_BUFFER_SIZE/Sensors::CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT << "\n";
     std::cout << "Storage buffer size (in data points) = " << Sensors::CURRENT_SENSOR_STORAGE_LENGTH << "\n";
@@ -110,7 +118,7 @@ TEST_F(CurrentSensorTest, StandardInsertWrapBuffer) {
     for (size_t i = 0; i < numberOfMeasurementBuffersPerStorageBuffer; ++i)
     {
         LoadData(startValue, Sensors::CURRENT_SENSOR_BUFFER_SIZE, 0);
-        m_sensor.processCurrentMeasurements();
+        m_pSensor->processCurrentMeasurements();
         startValue += Sensors::CURRENT_SENSOR_BUFFER_SIZE/Sensors::CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT;
     }
     
@@ -119,7 +127,7 @@ TEST_F(CurrentSensorTest, StandardInsertWrapBuffer) {
     EXPECT_FALSE(msg.checkCRC());
     
     std::vector<uint8_t> measurements{};
-    EXPECT_TRUE(m_sensor.getMotorCurrent(msg, measurements));
+    EXPECT_TRUE(m_pSensor->getMotorCurrent(msg, measurements));
     
     float f;
     int count = 0;
@@ -141,7 +149,7 @@ TEST_F(CurrentSensorTest, FloatInsertSingleBuffer) {
   unsigned int dataLength_ms = 1;
   int numberOfDataPoints = dataLength_ms*Sensors::CURRENT_SENSOR_MEASUREMENTS_PER_TICK*sizeof(float);
   
-  m_sensor.clearStorageBuffer();
+  m_pSensor->clearStorageBuffer();
   
   std::vector<uint8_t> msgBytes{0x22, static_cast<uint8_t>(dataLength_ms & 0xFF), static_cast<uint8_t>((dataLength_ms >> 8) & 0xFF), 0x25, 0x26};
   EXPECT_TRUE(msg.loadFromBytes(msgBytes, 0));
@@ -159,10 +167,10 @@ TEST_F(CurrentSensorTest, FloatInsertSingleBuffer) {
   // storage buffer value. This just bumps the value off from the nominal integral value that would otherwise be applied by LoadData. We 
   // account for that shift when we check values below.
   LoadData(0, Sensors::CURRENT_SENSOR_BUFFER_SIZE, 1);
-  m_sensor.processCurrentMeasurements();
+  m_pSensor->processCurrentMeasurements();
   
   std::vector<uint8_t> measurements{};
-  EXPECT_TRUE(m_sensor.getMotorCurrent(msg, measurements));
+  EXPECT_TRUE(m_pSensor->getMotorCurrent(msg, measurements));
   EXPECT_EQ(measurements.size(), numberOfDataPoints + 2);
   
   // Now we'll check the values in the buffer. For each measurement, we need to convert from 4 bytes to float, which we'll accomplish with

@@ -6,18 +6,19 @@
  */
 
 #include "MotorControlState.h"
-#include "Logger.h"
+#include "SingletonFactory.h"
 #include <sstream>
-
-extern Logging::Logger theLogger;
 
 namespace MotorControl
 {
 
-	MotorControlState::MotorControlState(PololuG2MotorDriver* p_motorDriver) :
-			m_pMotorDriver{p_motorDriver}
+	MotorControlState::MotorControlState(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+			m_pMotorDriver{pMotorDriver},
+			m_pLogger{pLogger}
 	{
-		m_stateEntryTime = HAL_GetTick();
+		SingletonFactory factory;
+		m_pTimebase = factory.retrieve<ITimebase>();
+		m_stateEntryTime = m_pTimebase->getTime_ms();
 	}
 
 	MotorControlState::~MotorControlState()
@@ -29,14 +30,14 @@ namespace MotorControl
 	// current state
 	uint32_t MotorControlState::timeInState() const
 	{
-		if (HAL_GetTick() > m_stateEntryTime)
+		if (m_pTimebase->getTime_ms() > m_stateEntryTime)
 		{
-			return HAL_GetTick() - m_stateEntryTime;
+			return m_pTimebase->getTime_ms() - m_stateEntryTime;
 		}
 		else
 		{
 			// tick has rolled over
-			return UINT32_MAX - m_stateEntryTime + HAL_GetTick() + 1;
+			return UINT32_MAX - m_stateEntryTime + m_pTimebase->getTime_ms() + 1;
 		}
 	}
 
@@ -46,14 +47,14 @@ namespace MotorControl
 		// ***** DISABLED STATE ******
 		// ***************************
 
-		Disabled::Disabled(PololuG2MotorDriver* pMotorDriver) :
-				MotorControlState(pMotorDriver)
+		Disabled::Disabled(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->wakeMotor();
 			m_pMotorDriver->disableMotor();
 			m_stateId = DISABLED;
 			setName("DISABLED");
-			theLogger.logString(info, "Motor controller entering DISABLED state; disabling motor driver");
+			m_pLogger->logString(info, "Motor controller entering DISABLED state; disabling motor driver");
 		}
 
 		std::unique_ptr<MotorControlState> Disabled::handleEvent(MotorEvent event)
@@ -70,18 +71,18 @@ namespace MotorControl
 
 				case ENABLE_MOTOR:
 					// enter idle state, where motor driver will be enabled
-					return std::make_unique<Idle>(m_pMotorDriver);
+					return std::make_unique<Idle>(m_pMotorDriver, m_pLogger);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case SLEEP:
 					// enter sleep state, where motor will be disabled and driver put in sleep mode
-					return std::make_unique<Sleeping>(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver, m_pLogger);
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller DISABLED state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller DISABLED state");
 					return nullptr;
 			}
 		}
@@ -90,13 +91,13 @@ namespace MotorControl
 		// ******* IDLE STATE ********
 		// ***************************
 
-		Idle::Idle(PololuG2MotorDriver* pMotorDriver) :
-				MotorControlState(pMotorDriver)
+		Idle::Idle(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->enableMotor();
 			m_stateId = IDLE;
 			setName("IDLE");
-			theLogger.logString(info, "Motor controller entering IDLE state, motor enabled");
+			m_pLogger->logString(info, "Motor controller entering IDLE state, motor enabled");
 		}
 
 		std::unique_ptr<MotorControlState> Idle::handleEvent(MotorEvent event)
@@ -112,27 +113,27 @@ namespace MotorControl
 
 				case MOTOR_COMMAND:
 					if (event.cmd)
-						return std::make_unique<Ramp>(m_pMotorDriver, event.cmd);
+						return std::make_unique<Ramp>(m_pMotorDriver, m_pLogger, event.cmd);
 					else
 					{
-						theLogger.logString(error, "Motor command event received without valid command object");
+						m_pLogger->logString(error, "Motor command event received without valid command object");
 						return nullptr;
 					}
 
 				case DISABLE_MOTOR:
 					// enter disabled state, where motor driver will be disabled
-					return std::make_unique<Disabled>(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver, m_pLogger);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case SLEEP:
 					// enter sleeping state, where motor driver will be disabled and put to low power sleep state
-					return std::make_unique<Sleeping>(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver, m_pLogger);
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller IDLE state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller IDLE state");
 					return nullptr;
 			}
 		}
@@ -141,13 +142,13 @@ namespace MotorControl
 		// ****** FAULT STATE ********
 		// ***************************
 
-		Fault::Fault(PololuG2MotorDriver* pMotorDriver) :
-				MotorControlState(pMotorDriver)
+		Fault::Fault(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->disableMotor();
 			m_stateId = FAULT;
 			setName("FAULT");
-			theLogger.logString(info, "Motor controller entering FAULT state, disabling motor driver");
+			m_pLogger->logString(info, "Motor controller entering FAULT state, disabling motor driver");
 		}
 
 		std::unique_ptr<MotorControlState> Fault::handleEvent(MotorEvent event)
@@ -167,13 +168,13 @@ namespace MotorControl
 					if (m_pMotorDriver->isDriverFaulted())
 						return nullptr;
 					else
-						return std::make_unique<Disabled>(m_pMotorDriver);
+						return std::make_unique<Disabled>(m_pMotorDriver, m_pLogger);
 
 				case MOTOR_COMMAND:
 					return nullptr;
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller FAULT state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller FAULT state");
 					return nullptr;
 			}
 		}
@@ -182,13 +183,13 @@ namespace MotorControl
 		// ****** SLEEPING STATE ********
 		// ***************************
 
-		Sleeping::Sleeping(PololuG2MotorDriver* pMotorDriver) :
-				MotorControlState(pMotorDriver)
+		Sleeping::Sleeping(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->sleepMotor();
 			m_stateId = SLEEPING;
 			setName("SLEEPING");
-			theLogger.logString(info, "Motor controller entering SLEEPING state, sleeping motor driver");
+			m_pLogger->logString(info, "Motor controller entering SLEEPING state, sleeping motor driver");
 		}
 
 		std::unique_ptr<MotorControlState> Sleeping::handleEvent(MotorEvent event)
@@ -208,14 +209,14 @@ namespace MotorControl
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case WAKE:
-					theLogger.logString(info, "Received wake event, waking motor driver");
-					return std::make_unique<Disabled>(m_pMotorDriver);
+					m_pLogger->logString(info, "Received wake event, waking motor driver");
+					return std::make_unique<Disabled>(m_pMotorDriver, m_pLogger);
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller SLEEPING state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller SLEEPING state");
 					return nullptr;
 			}
 		}
@@ -224,8 +225,8 @@ namespace MotorControl
 		// ******** RAMP STATE *******
 		// ***************************
 
-		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, std::unique_ptr<MotorCommand>& pMotorCommand) :
-				MotorControlState(pMotorDriver),
+		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger, std::unique_ptr<MotorCommand>& pMotorCommand) :
+				MotorControlState(pMotorDriver, pLogger),
 				m_pMotorCommand{std::move(pMotorCommand)}
 		{
 			m_stateId = RAMP;
@@ -235,7 +236,7 @@ namespace MotorControl
 			{
 				// no valid command received - exit state right away
 				m_stateExitTime = m_stateEntryTime;
-				theLogger.logString(error, "Entering ramp state, no motor command provided, speed will be unchanged");
+				m_pLogger->logString(error, "Entering ramp state, no motor command provided, speed will be unchanged");
 			}
 			else
 			{
@@ -272,7 +273,7 @@ namespace MotorControl
 							":" << m_pMotorDriver->getPwmDutyCycle() << " to " << (m_pMotorCommand->forwardDirection ? "forward" : "reverse") <<
 							":" << m_pMotorCommand->pwmDutyCycle;
 
-					theLogger.logString(info, logStringStream.str());
+					m_pLogger->logString(info, logStringStream.str());
 				}
 			}
 		}
@@ -298,16 +299,16 @@ namespace MotorControl
 					// note we check if we are at least equal to the state exit time, but not more than 1000 ticks greater; this
 					// allows us to tolerate a rollover in the tick timer without having to worry if we miss the exact tick when
 					// we should exit
-					if (HAL_GetTick() >= m_stateExitTime && HAL_GetTick() < (m_stateExitTime + 1000))
+					if (m_pTimebase->getTime_ms() >= m_stateExitTime && m_pTimebase->getTime_ms() < (m_stateExitTime + 1000))
 					{
 						// ensure we've got the correct final duty cycle
 						m_pMotorDriver->setPwmDutyCycle(m_pMotorCommand->pwmDutyCycle);
 
 						// exit to the correct state
 						if (m_pMotorCommand->pwmDutyCycle == 0)
-							return std::make_unique<Idle>(m_pMotorDriver);
+							return std::make_unique<Idle>(m_pMotorDriver, m_pLogger);
 						else
-							return std::make_unique<Running>(m_pMotorDriver);
+							return std::make_unique<Running>(m_pMotorDriver, m_pLogger);
 					}
 
 					{
@@ -333,8 +334,8 @@ namespace MotorControl
 							{
 								// this is an unexpected zero crossing, we will just zero the duty cycle and log the incident
 								m_pMotorDriver->setPwmDutyCycle(0);
-								theLogger.logString(warning, "Unexpected zero crossing in motor driver PWM ramp, idling motor");
-								return std::make_unique<Idle>(m_pMotorDriver);
+								m_pLogger->logString(warning, "Unexpected zero crossing in motor driver PWM ramp, idling motor");
+								return std::make_unique<Idle>(m_pMotorDriver, m_pLogger);
 							}
 						}
 						else
@@ -347,18 +348,18 @@ namespace MotorControl
 
 				case MOTOR_COMMAND:
 					// We don't process new commands while ramping
-					theLogger.logString(warning, "Ignoring new motor command received while ramping");
+					m_pLogger->logString(warning, "Ignoring new motor command received while ramping");
 
 					return nullptr;
 
 				case DISABLE_MOTOR:
-					return std::make_unique<Disabled>(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver, m_pLogger);
 
 				case MOTOR_FAULT:
-					return std::make_unique<Fault>(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller RAMP state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller RAMP state");
 					return nullptr;
 			}
 		}
@@ -367,8 +368,8 @@ namespace MotorControl
 		// ****** RUNNING STATE ******
 		// ***************************
 
-		Running::Running(PololuG2MotorDriver* pMotorDriver) :
-				MotorControlState(pMotorDriver)
+		Running::Running(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+				MotorControlState(pMotorDriver, pLogger)
 		{
 			std::stringstream logStringStream;
 			m_stateId = RUNNING;
@@ -376,7 +377,7 @@ namespace MotorControl
 
 			logStringStream << "Motor controller entering RUNNING state in " << (m_pMotorDriver->getForwardDirection() ? "forward" : "reverse")
 					<< " direction at duty cycle " << m_pMotorDriver->getPwmDutyCycle();
-			theLogger.logString(info, logStringStream.str());
+			m_pLogger->logString(info, logStringStream.str());
 		}
 
 		std::unique_ptr<MotorControlState> Running::handleEvent(MotorEvent event)
@@ -392,27 +393,27 @@ namespace MotorControl
 
 				case MOTOR_COMMAND:
 					if (event.cmd)
-						return std::make_unique<Ramp>(m_pMotorDriver, event.cmd);
+						return std::make_unique<Ramp>(m_pMotorDriver, m_pLogger, event.cmd);
 					else
 					{
-						theLogger.logString(error, "Motor command event received without valid command object");
+						m_pLogger->logString(error, "Motor command event received without valid command object");
 						return nullptr;
 					}
 
 				case DISABLE_MOTOR:
 					// enter disabled state, where motor driver will be disabled
-					return std::make_unique<Disabled>(m_pMotorDriver);
+					return std::make_unique<Disabled>(m_pMotorDriver, m_pLogger);
 
 				case MOTOR_FAULT:
 					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver);
+					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case SLEEP:
 					// enter sleeping state, where motor driver will be disabled and put to low power sleep state
-					return std::make_unique<Sleeping>(m_pMotorDriver);
+					return std::make_unique<Sleeping>(m_pMotorDriver, m_pLogger);
 
 				default:
-					theLogger.logString(error, "Unhandled event type in motor controller IDLE state");
+					m_pLogger->logString(error, "Unhandled event type in motor controller IDLE state");
 					return nullptr;
 			}
 		}

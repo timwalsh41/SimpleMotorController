@@ -7,24 +7,21 @@
 
 #include "MessageHandler.h"
 #include "CommandInterface.h"
-#include "OutputGateway.h"
-#include "Controller.h"
-#include "MotorCommandHandler.h"
-#include "CurrentSensor.h"
-#include "Logger.h"
 #include "Version.h"
-
-extern MotorControl::Controller theController;
-extern MotorControl::MotorCommandHandler theMotorCommandHandler;
-extern MessageHandling::OutputGateway theOutputGateway;
-extern Sensors::CurrentSensor theCurrentSensor;
-extern Logging::Logger theLogger;
+#include "SingletonFactory.h"
 
 namespace MessageHandling
 {
 
 MessageHandler::MessageHandler()
 {
+	SingletonFactory factory;
+	m_pLogger = factory.retrieve<Logging::ILogger>();
+	m_pController = factory.retrieve<MotorControl::Controller>();
+	m_pMotorCommandHandler = factory.retrieve<MotorControl::MotorCommandHandler>();
+	m_pOutputGateway = factory.retrieve<MessageHandling::OutputGateway>();
+	m_pCurrentSensor = factory.retrieve<Sensors::CurrentSensor>();
+
 	buildCommandMap();
 }
 
@@ -55,7 +52,7 @@ void MessageHandler::processMessages()
 			uint8_t payload = ACK_INVALID_CRC;
 			msg.setPayload(payload);
 
-			theLogger.logString(error, std::string("Received message with bad CRC"));
+			m_pLogger->logString(error, std::string("Received message with bad CRC"));
 		}
 		else
 		{
@@ -67,7 +64,7 @@ void MessageHandler::processMessages()
 				uint8_t payload = ACK_INVALID_COMMAND;
 				msg.setPayload(payload);
 
-				theLogger.logString(error, std::string("Received message with invalid command code"));
+				m_pLogger->logString(error, std::string("Received message with invalid command code"));
 			}
 			else
 			{
@@ -94,7 +91,7 @@ void MessageHandler::processMessages()
 					uint8_t payload = ACK_INVALID_PAYLOAD;
 					msg.setPayload(payload);
 
-					theLogger.logString(error, std::string("Unable to execute command"));
+					m_pLogger->logString(error, std::string("Unable to execute command"));
 				}
 			}
 		}
@@ -102,92 +99,96 @@ void MessageHandler::processMessages()
 		// msg has the original command code, we just need to set the ack bit and calculate the CRC
 		msg.setAck();
 		msg.setCRC();
-		theOutputGateway.sendMessage(msg);
+		m_pOutputGateway->sendMessage(msg);
 	}
 }
 
 void MessageHandler::buildCommandMap()
 {
-	m_commandMap[CMD_ENABLE_MOTOR] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_ENABLE_MOTOR] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.enableMotor(msg, payload);
+				return m_pMotorCommandHandler->enableMotor(msg, payload);
 			};
-	m_commandMap[CMD_DISABLE_MOTOR] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_DISABLE_MOTOR] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.disableMotor(msg, payload);
+				return m_pMotorCommandHandler->disableMotor(msg, payload);
 			};
-	m_commandMap[CMD_SLEEP_DRIVER] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_SLEEP_DRIVER] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.sleepDriver(msg, payload);
+				return m_pMotorCommandHandler->sleepDriver(msg, payload);
 			};
-	m_commandMap[CMD_WAKE_DRIVER] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_WAKE_DRIVER] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.wakeDriver(msg, payload);
+				return m_pMotorCommandHandler->wakeDriver(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_POS] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_MOTOR_POS] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.getMotorPosition(msg, payload);
+				return m_pMotorCommandHandler->getMotorPosition(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_SPEED] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_MOTOR_SPEED] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.getMotorSpeed(msg, payload);
+				return m_pMotorCommandHandler->getMotorSpeed(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_DIR] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_MOTOR_DIR] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.getMotorDirection(msg, payload);
+				return m_pMotorCommandHandler->getMotorDirection(msg, payload);
 			};
-	m_commandMap[CMD_GET_MOTOR_CURRENT] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_MOTOR_CURRENT] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theCurrentSensor.getMotorCurrent(msg, payload);
+				return m_pCurrentSensor->getMotorCurrent(msg, payload);
 			};
-	m_commandMap[CMD_RAMP_MOTOR_ON] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_RAMP_MOTOR_ON] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.rampMotorOn(msg, payload);
+				return m_pMotorCommandHandler->rampMotorOn(msg, payload);
 			};
-	m_commandMap[CMD_RAMP_MOTOR_OFF] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_RAMP_MOTOR_OFF] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.rampMotorOff(msg, payload);
+				return m_pMotorCommandHandler->rampMotorOff(msg, payload);
 			};
-	m_commandMap[CMD_SET_MAX_DC] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_SET_MAX_DC] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.setMaxDutyCycle(msg, payload);
+				return m_pMotorCommandHandler->setMaxDutyCycle(msg, payload);
 			};
-	m_commandMap[CMD_INJECT_FAULT] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_INJECT_FAULT] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return theMotorCommandHandler.injectFault(msg, payload);
+				return m_pMotorCommandHandler->injectFault(msg, payload);
 			};
 	m_commandMap[CMD_GET_VERSION] = Utility::sendVersionMessage;
-	m_commandMap[CMD_GET_STATUS] = [](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_STATUS] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				// return payload is 8 bytes
 				payload.reserve(8);
 
 				// byte 0: motor controller state
-				payload.push_back(static_cast<uint8_t>(theController.getState()));
+				payload.push_back(static_cast<uint8_t>(m_pController->getState()));
 
 				// byte 1: bitmapped status byte
 				uint8_t statusByte{0};
-				statusByte |= (theController.getMotorDirection() ? 1 : 0) << 0;	// bit 0: motor direction
-				statusByte |= (theController.isDriverFaulted() ? 1 : 0) << 1;	// bit 1: driver fault status
-				statusByte |= (theController.isDriverSleeping() ? 1 : 0) << 2;	// bit 2: driver sleep status
-				statusByte |= (theLogger.logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
+				statusByte |= (m_pController->getMotorDirection() ? 1 : 0) << 0;	// bit 0: motor direction
+				statusByte |= (m_pController->isDriverFaulted() ? 1 : 0) << 1;	// bit 1: driver fault status
+				statusByte |= (m_pController->isDriverSleeping() ? 1 : 0) << 2;	// bit 2: driver sleep status
+				statusByte |= (m_pLogger->logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
 				payload.push_back(statusByte);
 
 				// bytes 2-3: motor drive level (tenths of a percent)
 				// TODO: verify endianness
-				uint16_t driveLevel = theController.getMotorPwmLevel();
+				uint16_t driveLevel = m_pController->getMotorPwmLevel();
 				payload.push_back(static_cast<uint8_t>((driveLevel >> 0) & 0xFF));
 				payload.push_back(static_cast<uint8_t>((driveLevel >> 8) & 0xFF));
 
 				// bytes 4-7: time in current state (ms)
 				// TODO: verify endianness
-				uint32_t timeInState = theController.getTimeInState();
+				uint32_t timeInState = m_pController->getTimeInState();
 				payload.push_back(static_cast<uint8_t>((timeInState >> 0) & 0xFF));
 				payload.push_back(static_cast<uint8_t>((timeInState >> 8) & 0xFF));
 				payload.push_back(static_cast<uint8_t>((timeInState >> 16) & 0xFF));
 				payload.push_back(static_cast<uint8_t>((timeInState >> 24) & 0xFF));
 
 				return true;
+			};
+	m_commandMap[CMD_GET_LOG_MESSAGE] = [this](const Message& msg, std::vector<uint8_t>& payload)
+			{
+				return m_pLogger->retrieveLogMessage(msg, payload);
 			};
 }
 

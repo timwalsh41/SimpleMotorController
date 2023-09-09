@@ -47,5 +47,6 @@ constexpr uint8_t CMD_SET_MAX_DC = 0x52;		// 'R'
 constexpr uint8_t CMD_INJECT_FAULT = 0x60;		// '`'
 constexpr uint8_t CMD_GET_VERSION = 0x70;		// 'p'
 constexpr uint8_t CMD_GET_STATUS = 0x71;		// 'q'
+constexpr uint8_t CMD_GET_LOG_MESSAGE = 0x72;	// 'r'
 
 #endif /* INC_COMMANDINTERFACE_H_ */

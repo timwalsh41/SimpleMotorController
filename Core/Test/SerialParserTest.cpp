@@ -2,21 +2,35 @@
 #include <gtest/gtest.h>
 #include <Message.h>
 #include <TestTimebase.h>
+#include <SingletonFactory.h>
 #include <MockMessageHandler.h>
 #include <SerialParser.h>
 #include <CommandInterface.h>
+#include <ILogger.h>
+#include <MockLogger.h>
 #include <iostream>
 #include <deque>
 #include <chrono>
 #include <thread>
 
-TEST(SerialParserTest, DetectValiddStartAndStopSequence) {
+class SerialParserTest : public ::testing::Test
+{
+    protected:
+        void SetUp() override
+        {
+            SingletonFactory factory;
+            std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
+            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+        }
+        
+        MockMessageHandler m_messageHandler{};
+};
 
-    TestTimebase timebase;
-    MockMessageHandler messageHandler;
-    MessageHandling::SerialParser sp{&timebase, &messageHandler};
+TEST_F(SerialParserTest, DetectValiddStartAndStopSequence) {
+
+    MessageHandling::SerialParser sp{&m_messageHandler};
     
-    EXPECT_CALL(messageHandler, loadIncomingMessage).Times(1);
+    EXPECT_CALL(m_messageHandler, loadIncomingMessage).Times(1);
     
     std::deque<uint8_t> chars{};
     chars.push_back('a');
@@ -41,13 +55,11 @@ TEST(SerialParserTest, DetectValiddStartAndStopSequence) {
     }
 }
 
-TEST(SerialParserTest, NoValidStartSequence) {
+TEST_F(SerialParserTest, NoValidStartSequence) {
 
-    TestTimebase timebase;
-    MockMessageHandler messageHandler;
-    MessageHandling::SerialParser sp{&timebase, &messageHandler};
+    MessageHandling::SerialParser sp{&m_messageHandler};
     
-    EXPECT_CALL(messageHandler, loadIncomingMessage).Times(0);
+    EXPECT_CALL(m_messageHandler, loadIncomingMessage).Times(0);
     
     std::deque<uint8_t> chars{};
     chars.push_back('a');
@@ -70,13 +82,11 @@ TEST(SerialParserTest, NoValidStartSequence) {
     sp.ProcessIncomingData();
 }
 
-TEST(SerialParserTest, NoValidStopSequence) {
+TEST_F(SerialParserTest, NoValidStopSequence) {
 
-    TestTimebase timebase;
-    MockMessageHandler messageHandler;
-    MessageHandling::SerialParser sp{&timebase, &messageHandler};
+    MessageHandling::SerialParser sp{&m_messageHandler};
     
-    EXPECT_CALL(messageHandler, loadIncomingMessage).Times(0);
+    EXPECT_CALL(m_messageHandler, loadIncomingMessage).Times(0);
     
     std::deque<uint8_t> chars{};
     chars.push_back('a');
@@ -100,13 +110,11 @@ TEST(SerialParserTest, NoValidStopSequence) {
     sp.ProcessIncomingData();
 }
 
-TEST(SerialParserTest, Timeout) {
+TEST_F(SerialParserTest, Timeout) {
 
-    TestTimebase timebase;
-    MockMessageHandler messageHandler;
-    MessageHandling::SerialParser sp{&timebase, &messageHandler};
+    MessageHandling::SerialParser sp{&m_messageHandler};
     
-    EXPECT_CALL(messageHandler, loadIncomingMessage).Times(0);
+    EXPECT_CALL(m_messageHandler, loadIncomingMessage).Times(0);
     
     std::deque<uint8_t> chars{};
     chars.push_back('a');
@@ -153,13 +161,11 @@ TEST(SerialParserTest, Timeout) {
     sp.ProcessIncomingData();
 }
 
-TEST(SerialParserTest, Overflow) {
+TEST_F(SerialParserTest, Overflow) {
 
-    TestTimebase timebase;
-    MockMessageHandler messageHandler;
-    MessageHandling::SerialParser sp{&timebase, &messageHandler};
+    MessageHandling::SerialParser sp{&m_messageHandler};
     
-    EXPECT_CALL(messageHandler, loadIncomingMessage).Times(0);
+    EXPECT_CALL(m_messageHandler, loadIncomingMessage).Times(0);
     
     // load up the start sequence, this puts the state machine into a regime where it will check for maximum message length
     for (size_t i = 0; i < START_SEQUENCE_LENGTH; ++i)

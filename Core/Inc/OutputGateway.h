@@ -11,9 +11,10 @@
 #include <queue>
 #include <string>
 #include <string_view>
+#include <memory>
 #include "Message.h"
 #include "CommandInterface.h"
-#include "Logger.h"
+#include "ILogger.h"
 
 namespace MessageHandling
 {
@@ -24,8 +25,9 @@ namespace MessageHandling
 		OutputGateway();
 		~OutputGateway();
 		OutputGateway(const OutputGateway&) = delete;
+		OutputGateway& operator=(const OutputGateway&) = delete;
 
-		void logString(LogLevel level, const std::string& msg);
+		void addLogString(std::string& msg);
 		void sendMessage(const Message& msg);
 		void processOutgoingMessages();
 		void setReceiving() { m_receiving = true; }
@@ -37,9 +39,10 @@ namespace MessageHandling
 		void addStartStopSequence(const uint8_t* inputArray, uint32_t inputLength, uint8_t** outputArray, uint32_t& outputLength) const;
 
 		bool m_receiving = true;
-		static constexpr std::string_view logLevelString[] = {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"};
-		std::queue<std::string> m_logStringQueue;
-		std::queue<Message> m_messageQueue;
+
+		std::queue<std::string> m_logStringQueue{};
+		std::queue<Message> m_messageQueue{};
+		std::shared_ptr<Logging::ILogger> m_pLogger;
 	};
 
 } /* namespace MessageHandling */

@@ -6,17 +6,17 @@
  */
 
 #include "Controller.h"
-#include "Logger.h"
+#include "SingletonFactory.h"
 #include <cstring>
-
-extern Logging::Logger theLogger;
 
 namespace MotorControl
 {
 	Controller::Controller() :
 		m_lastEncoderCount(m_motorDriver.getEncoderCounts())
 	{
-		m_state = std::make_unique<MotorControlStates::Disabled>(&m_motorDriver);
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_state = std::make_unique<MotorControlStates::Disabled>(&m_motorDriver, m_pLogger);
 		std::memset(m_pMotorSpeedBuffer, 0, sizeof(float)*VELOCITY_BUFFER_SIZE);
 	}
 

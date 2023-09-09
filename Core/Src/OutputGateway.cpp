@@ -5,10 +5,11 @@
  *      Author: tim
  */
 
-#include <cstring>
 #include "stm32l4xx_hal.h"
 #include "OutputGateway.h"
 #include "Utility.h"
+#include "SingletonFactory.h"
+#include <cstring>
 
 extern UART_HandleTypeDef huart2;
 
@@ -17,7 +18,8 @@ namespace MessageHandling
 
 	OutputGateway::OutputGateway()
 	{
-
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
 	}
 
 	OutputGateway::~OutputGateway()
@@ -26,11 +28,9 @@ namespace MessageHandling
 	}
 
 	// TODO: need to handle log messages with a full output message if running in release mode
-	void OutputGateway::logString(LogLevel level, const std::string& msg)
+	void OutputGateway::addLogString(std::string& msg)
 	{
-		std::string outputString = "[" + std::to_string(HAL_GetTick()) + "]" + \
-								std::string(logLevelString[level]) + ": " + msg + '\n';
-		m_logStringQueue.push(outputString);
+		m_logStringQueue.push(std::move(msg));
 	}
 
 	void OutputGateway::sendMessage(const Message& msg)
@@ -75,7 +75,7 @@ namespace MessageHandling
 			delete[] fullMessage;
 		}
 		else
-			logString(error, "Unable to serialize and transmit output message");
+			m_pLogger->logString(error, "Unable to serialize and transmit output message");
 
 		if (message != nullptr)
 			delete[] message;
@@ -92,15 +92,11 @@ namespace MessageHandling
 		if (!m_messageQueue.empty())
 		{
 			transmitMessage(m_messageQueue.front());
-			// TODO: make sure lifetime of the message is OK here, once we pop
-			// it will get destroyed
 			m_messageQueue.pop();
 		}
 		else if (!m_logStringQueue.empty())
 		{
 			transmitString(m_logStringQueue.front());
-			// TODO: make sure lifetime of the string is OK here, once we
-			// pop it will get destroyed
 			m_logStringQueue.pop();
 		}
 	}

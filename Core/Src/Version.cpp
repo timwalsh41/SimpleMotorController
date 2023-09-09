@@ -6,23 +6,24 @@
  */
 
 #include "Version.h"
-#include "OutputGateway.h"
-#include "Logger.h"
+#include "ILogger.h"
+#include "SingletonFactory.h"
+#include <memory>
 
-extern MessageHandling::OutputGateway theOutputGateway;
-extern Logging::Logger theLogger;
+extern std::shared_ptr<Logging::ILogger> pLogger;
 
 namespace Utility
 {
 
 	bool sendVersionMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& returnData)
 	{
-
+		SingletonFactory factory;
+		std::shared_ptr<Logging::ILogger> pLogger = factory.retrieve<Logging::ILogger>();
 
 		// check packet format
 		if (msg.getPayloadLength() > 0)
 		{
-			theLogger.logString(error, std::string("Invalid payload in get version command"));
+			pLogger->logString(error, std::string("Invalid payload in get version command"));
 			return false;
 		}
 
@@ -30,7 +31,7 @@ namespace Utility
 		returnData.push_back(MINOR_VERSION);
 		returnData.push_back(BUILD);
 
-		theLogger.logString(info, "Successfully processed version command");
+		pLogger->logString(info, "Successfully processed version command");
 
 		return true;
 	}

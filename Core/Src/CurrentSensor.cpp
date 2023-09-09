@@ -6,16 +6,17 @@
  */
 
 #include "CurrentSensor.h"
-#include "Logger.h"
+#include "SingletonFactory.h"
 #include <cstring>
 #include <algorithm>
-
-extern Logging::Logger theLogger;
 
 namespace Sensors
 {
 
-	CurrentSensor::CurrentSensor() {
+	CurrentSensor::CurrentSensor()
+	{
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
 
 		for (size_t i = 0; i < CURRENT_SENSOR_BUFFER_SIZE; ++i)
 		{
@@ -78,7 +79,7 @@ namespace Sensors
 		// motor current request has a two byte payload equal to the number of milliseconds of data to send
 		if (msg.getPayload().size() != 2)
 		{
-			theLogger.logString(error, "Invalid payload in getMotorCurrent command");
+			m_pLogger->logString(error, "Invalid payload in getMotorCurrent command");
 			return false;
 		}
 
@@ -103,7 +104,7 @@ namespace Sensors
 
 		if (payload.capacity() != payloadSize)
 		{
-			theLogger.logString(error, std::string("Unable to allocate memory for returning motor current array"));
+			m_pLogger->logString(error, std::string("Unable to allocate memory for returning motor current array"));
 			return false;
 		}
 

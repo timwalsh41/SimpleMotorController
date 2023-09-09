@@ -8,19 +8,17 @@
 #include "SerialParser.h"
 #include "Message.h"
 #include "MessageHandler.h"
-#include "Logger.h"
+#include "SingletonFactory.h"
 #include <cstring>
-
-extern Logging::Logger theLogger;
 
 namespace MessageHandling
 {
 	template <typename T>
-	bool sequenceMatch(const char* refSequence, T& compSequence, size_t refSequenceLength)
+	bool SerialParser::sequenceMatch(const char* refSequence, T& compSequence, size_t refSequenceLength)
 	{
 		if (refSequenceLength != compSequence.size())
 		{
-			theLogger.logString(warning, "sequenceMatch: size mismatch between reference sequence and candidate sequence");
+			m_pLogger->logString(warning, "sequenceMatch: size mismatch between reference sequence and candidate sequence");
 			return false;
 		}
 
@@ -34,10 +32,12 @@ namespace MessageHandling
 		return true;
 	}
 
-	SerialParser::SerialParser(ITimebase* timebase, IMessageHandler* messageHandler) :
-			m_timebase(timebase),
-			m_messageHandler(messageHandler)
+	SerialParser::SerialParser(IMessageHandler* pMessageHandler) :
+			m_pMessageHandler(pMessageHandler)
 	{
+		SingletonFactory factory;
+		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pTimebase = factory.retrieve<ITimebase>();
 		m_candidateMessage.reserve(MAX_INCOMING_MESSAGE_LENGTH/4);
 	}
 
@@ -50,13 +50,13 @@ namespace MessageHandling
 	// ISR function to receive the incoming character from the UART buffer
 	void SerialParser::ReceiveChar(uint8_t new_char)
 	{
-		m_lastCharReceivedTime = m_timebase->getTime_ms();
+		m_lastCharReceivedTime = m_pTimebase->getTime_ms();
 
 		if (m_incomingBuffer.size() <= INCOMING_BUFFER_SIZE)
 			m_incomingBuffer.push(new_char);
 		else
 		{
-			theLogger.logString(error, "Input serial buffer overflow, discarding buffer");
+			m_pLogger->logString(error, "Input serial buffer overflow, discarding buffer");
 
 			// clear the incoming buffer queue
 			m_incomingBuffer = {};
@@ -71,12 +71,12 @@ namespace MessageHandling
 		stopSequenceCandidate.reserve(STOP_SEQUENCE_LENGTH);
 
 		// check for timeout in transmission
-		if (m_timebase->getTime_ms() < m_lastCharReceivedTime)
+		if (m_pTimebase->getTime_ms() < m_lastCharReceivedTime)
 			// clock has rolled over, neglect potential timeout
-			m_lastCharReceivedTime = m_timebase->getTime_ms();
-		else if ((m_timebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
+			m_lastCharReceivedTime = m_pTimebase->getTime_ms();
+		else if ((m_pTimebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
 		{
-			theLogger.logString(warning, "Serial packet timed out before completion, discarding");
+			m_pLogger->logString(warning, "Serial packet timed out before completion, discarding");
 			m_incomingBuffer = {};
 			m_state = IDLE;
 		}
@@ -90,7 +90,7 @@ namespace MessageHandling
 			// the push_back method
 			logString = "Received new character ";
 			logString.push_back(new_char);
-			theLogger.logString(debug, logString);
+			m_pLogger->logString(debug, logString);
 
 			switch(m_state)
 			{
@@ -107,7 +107,7 @@ namespace MessageHandling
 					if (sequenceMatch(START_SEQUENCE, m_startSequenceCandidate, START_SEQUENCE_LENGTH))
 					{
 						// we have matched the start sequence, move to RECEIVING state
-						theLogger.logString(debug, std::string("Received start sequence"));
+						m_pLogger->logString(debug, std::string("Received start sequence"));
 						m_state = RECEIVING;
 						m_startSequenceCandidate.clear();
 					}
@@ -131,9 +131,9 @@ namespace MessageHandling
 						// we have received the stop sequence, message is complete
 						Message msg;
 						msg.loadFromBytes(m_candidateMessage, STOP_SEQUENCE_LENGTH);
-						m_messageHandler->loadIncomingMessage(msg);
+						m_pMessageHandler->loadIncomingMessage(msg);
 
-						theLogger.logString(debug, std::string("Received stop sequence, processing message"));
+						m_pLogger->logString(debug, std::string("Received stop sequence, processing message"));
 
 						// we are finished receiving the current message so return to IDLE
 						m_state = IDLE;
@@ -149,13 +149,13 @@ namespace MessageHandling
 					m_state = IDLE;
 					m_candidateMessage.clear();
 
-					theLogger.logString(error, "Incoming message overflow");
+					m_pLogger->logString(error, "Incoming message overflow");
 				}
 
 				break;
 
 			default:
-				theLogger.logString(error, "SerialParser in invalid state, resetting to idle");
+				m_pLogger->logString(error, "SerialParser in invalid state, resetting to idle");
 				m_state = IDLE;
 				m_candidateMessage.clear();
 				break;

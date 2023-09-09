@@ -4,6 +4,8 @@ add_executable(
   MessageTest
   MessageTest.cpp
   MockLogger.cpp
+  ../Src/TestTimebase.cpp
+  ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
 )
 target_link_libraries(
@@ -19,6 +21,8 @@ add_executable(
   CurrentSensorTest
   CurrentSensorTest.cpp
   MockLogger.cpp
+  ../Src/TestTimebase.cpp
+  ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
   ../Src/CurrentSensor.cpp
 )
@@ -36,6 +40,7 @@ add_executable(
   SerialParserTest
   SerialParserTest.cpp
   MockLogger.cpp
+  ../Src/SingletonFactory.cpp
   ../Src/TestTimebase.cpp
   ../Src/Message.cpp
   ../Src/SerialParser.cpp
