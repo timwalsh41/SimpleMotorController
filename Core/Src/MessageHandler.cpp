@@ -22,6 +22,12 @@ MessageHandler::MessageHandler()
 	m_pOutputGateway = factory.retrieve<MessageHandling::OutputGateway>();
 	m_pCurrentSensor = factory.retrieve<Sensors::CurrentSensor>();
 
+	if (m_pController.get() == nullptr || m_pMotorCommandHandler.get() == nullptr ||
+			m_pOutputGateway.get() == nullptr || m_pCurrentSensor.get() == nullptr)
+	{
+		m_pLogger->logString(fatal, "Unable to retrieve singleton objects required for operation");
+	}
+
 	buildCommandMap();
 }
 

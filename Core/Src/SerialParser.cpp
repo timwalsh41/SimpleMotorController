@@ -38,6 +38,12 @@ namespace MessageHandling
 		SingletonFactory factory;
 		m_pLogger = factory.retrieve<Logging::ILogger>();
 		m_pTimebase = factory.retrieve<ITimebase>();
+
+		if (m_pTimebase.get() == nullptr)
+		{
+			m_pLogger->logString(fatal, "Unable to retrieve timebase singleton");
+		}
+
 		m_candidateMessage.reserve(MAX_INCOMING_MESSAGE_LENGTH/4);
 	}
 

@@ -29,6 +29,7 @@
 #include "Controller.h"
 #include "MotorCommandHandler.h"
 #include "STM32Timebase.h"
+#include "StmUartWrapper.h"
 #include "Version.h"
 #include "Utility.h"
 #include "ILogger.h"
@@ -111,11 +112,14 @@ int main(void)
 
   std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, STM32Timebase>();
 
+  // create UART wrapper around uart2 interface
+  StmUartWrapper uartWrapper(&huart2);
+
   // create the logging singleton as that is accessed by all other objects
   std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logger>();
 
   // Output gateway, current sensor, and controller only requires the logger
-  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>();
+  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>(&uartWrapper);
   std::shared_ptr<CurrentSensor> pCurrentSensor = factory.create<CurrentSensor>();
   std::shared_ptr<Controller> pController = factory.create<Controller>();
 

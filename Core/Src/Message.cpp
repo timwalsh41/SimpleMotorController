@@ -194,8 +194,8 @@ namespace MessageHandling
 			return false;
 		}
 
-		// total length includes command code, payload, and 2 byte CRC
-		length = 3 + m_payload.size();
+		// total length includes header (command code, CRC, etc.) plus payload length
+		length = MINIMUM_MESSAGE_LENGTH + m_payload.size();
 
 		*message = new uint8_t[length];
 

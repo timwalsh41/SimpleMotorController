@@ -5,21 +5,22 @@
  *      Author: tim
  */
 
-#include "stm32l4xx_hal.h"
 #include "OutputGateway.h"
 #include "Utility.h"
 #include "SingletonFactory.h"
+#include "CommandInterface.h"
 #include <cstring>
-
-extern UART_HandleTypeDef huart2;
 
 namespace MessageHandling
 {
 
-	OutputGateway::OutputGateway()
+	OutputGateway::OutputGateway(IUartWrapper* pUartWrapper) :
+			m_pUartWrapper{pUartWrapper}
 	{
 		SingletonFactory factory;
 		m_pLogger = factory.retrieve<Logging::ILogger>();
+
+		// TODO: set up tx/rx callbacks
 	}
 
 	OutputGateway::~OutputGateway()
@@ -41,7 +42,8 @@ namespace MessageHandling
 	void OutputGateway::transmitString(const std::string& outString)
 	{
 		setTransmitting();
-		HAL_UART_Transmit_IT(&huart2, (const uint8_t*) outString.c_str(), outString.length());
+		m_pUartWrapper->transmitString(outString);
+		// HAL_UART_Transmit_IT(&huart2, (const uint8_t*) outString.c_str(), outString.length());
 
 		// adding a bit of delay here seems to keep the transmitted array from being corrupted
 		Utility::delayCycles(250);
@@ -49,36 +51,15 @@ namespace MessageHandling
 
 	void OutputGateway::transmitMessage(const Message& msg)
 	{
-		uint8_t* message = nullptr;
-		uint32_t length = 0;
+		std::string fullMessage{};
 
-		// get serialized message, note this allocates memory for message that
-		// we are responsible to free
-		if (msg.toByteArray(&message, length))
+		if (messageToStringWithStartStop(fullMessage, msg))
 		{
-			uint8_t* fullMessage = nullptr;
-			uint32_t fullMessageLength = 0;
-
-			// add the start and stop sequence to the raw serialized message, this function
-			// call allocates memory for fullMessage that we are responsible to free
-			addStartStopSequence(message, length, &fullMessage, fullMessageLength);
-			delete[] message;
-
 			// TODO: for debug mode, transmit a text version of the message
-
-			setTransmitting();
-			HAL_UART_Transmit_IT(&huart2, fullMessage, fullMessageLength);
-
-			// adding a bit of delay here seems to keep the transmitted array from being corrupted
-			Utility::delayCycles(250);
-
-			delete[] fullMessage;
+			transmitString(fullMessage);
 		}
 		else
 			m_pLogger->logString(error, "Unable to serialize and transmit output message");
-
-		if (message != nullptr)
-			delete[] message;
 	}
 
 	void OutputGateway::processOutgoingMessages()
@@ -101,33 +82,30 @@ namespace MessageHandling
 		}
 	}
 
-	void OutputGateway::addStartStopSequence(const uint8_t* inputArray, uint32_t inputLength, uint8_t** outputArray, uint32_t& outputLength) const
+	bool OutputGateway::messageToStringWithStartStop(std::string& outputString, const Message& inputMessage) const
 	{
-		outputLength = inputLength + START_SEQUENCE_LENGTH + STOP_SEQUENCE_LENGTH;
-		*outputArray = new uint8_t[outputLength];
+		uint8_t* msgBytes;
+		uint32_t msgLength;
+		outputString.clear();
 
-		// The handling of the double pointer is tricky. We need to pass in outputArray as
-		// a double pointer as we're doing the memory allocation here. So in the calling function
-		// we create a uint8_t pointer. If we were to just pass that into the function, that would
-		// just pass the value "0" (or some garbage address) since there is no memory allocated to
-		// that pointer. So we pass the address of the uint8_t pointer, which is the double pointer
-		// we manipulate here. So now we can allocate memory and return the address of our reserved
-		// block at the address of the base pointer in the calling function.
-		//
-		// To copy into the outputArray, we need to get the right memory addresses within the
-		// array. *outputArray is the address of the first byte of the array. So we can simply
-		// add offsets to that to get the right memory address to copy the individual blocks.
-		//
-		// To view the data in a watch window, we need to perform pointer/array arithmetic from
-		// the base address of our allocated memory block, which again is *outputArray. So, for
-		// example, to see the element at location 4, we can watch (*outputArray)[4]. The
-		// parentheses are important, with the parentheses we basically say go 4 bytes past
-		// address *outputArray and dereference. Without the parentheses, the index operator is
-		// executed first, so we actually take outputArray, add 4 to it, and then dereference that.
+		// the output string size is the message payload size, plus the minimum message length (command code, CRC, etc.)
+		// plus the start sequence and stop sequence lengths
+		outputString.reserve(MessageHandling::MINIMUM_MESSAGE_LENGTH +
+				inputMessage.getPayload().size() +
+				START_SEQUENCE_LENGTH +
+				STOP_SEQUENCE_LENGTH);
 
-		std::memcpy(*outputArray, START_SEQUENCE, START_SEQUENCE_LENGTH);
-		std::memcpy(*outputArray + START_SEQUENCE_LENGTH, inputArray, inputLength);
-		std::memcpy(*outputArray + outputLength - STOP_SEQUENCE_LENGTH, STOP_SEQUENCE, STOP_SEQUENCE_LENGTH);
+		if (!inputMessage.toByteArray(&msgBytes, msgLength))
+		{
+			m_pLogger->logString(error, "Unable to convert message to byte array for transmission");
+			return false;
+		}
+
+		outputString.insert(outputString.end(), &START_SEQUENCE[0], &START_SEQUENCE[START_SEQUENCE_LENGTH]);
+		outputString.insert(outputString.end(), &msgBytes[0], &msgBytes[msgLength]);
+		outputString.insert(outputString.end(), &STOP_SEQUENCE[0], &STOP_SEQUENCE[STOP_SEQUENCE_LENGTH]);
+
+		return true;
 	}
 
 } /* namespace MessageHandling */
