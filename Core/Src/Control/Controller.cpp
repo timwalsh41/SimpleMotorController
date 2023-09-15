@@ -7,16 +7,18 @@
 
 #include "Controller.h"
 #include "SingletonFactory.h"
+#include "MotorControlConstants.h"
 #include <cstring>
 
 namespace MotorControl
 {
-	Controller::Controller() :
-		m_lastEncoderCount(m_motorDriver.getEncoderCounts())
+	Controller::Controller(IMotorDriver* pMotorDriver) :
+		m_pMotorDriver{pMotorDriver},
+		m_lastEncoderCount(m_pMotorDriver->getEncoderCounts())
 	{
 		SingletonFactory factory;
 		m_pLogger = factory.retrieve<Logging::ILogger>();
-		m_state = std::make_unique<MotorControlStates::Disabled>(&m_motorDriver, m_pLogger);
+		m_state = std::make_unique<MotorControlStates::Disabled>(m_pMotorDriver, m_pLogger);
 		std::memset(m_pMotorSpeedBuffer, 0, sizeof(float)*VELOCITY_BUFFER_SIZE);
 	}
 
@@ -30,7 +32,7 @@ namespace MotorControl
 
 		if (m_state->getId() == FAULT)
 			nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
-		else if (m_motorDriver.isDriverFaulted())
+		else if (m_pMotorDriver->isDriverFaulted())
 			// TODO: Could move fault detection to interrupt
 			nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});
 		else
@@ -38,12 +40,12 @@ namespace MotorControl
 
 		updateState(nextState);
 		updateSpeed();
-		m_motorDriver.update();
+		m_pMotorDriver->update();
 	}
 
 	void Controller::updateSpeed()
 	{
-		int32_t currentEncoderCount = m_motorDriver.getEncoderCounts();
+		int32_t currentEncoderCount = m_pMotorDriver->getEncoderCounts();
 		m_instantaneousMotorSpeed = static_cast<float>(currentEncoderCount - m_lastEncoderCount);
 		m_bufferedMotorSpeed += (static_cast<float>(m_instantaneousMotorSpeed) -
 								 m_pMotorSpeedBuffer[m_speedBufferIdx]) / VELOCITY_BUFFER_SIZE;
@@ -100,17 +102,17 @@ namespace MotorControl
 
 	bool Controller::getMotorDirection() const
 	{
-		return m_motorDriver.getForwardDirection();
+		return m_pMotorDriver->getForwardDirection();
 	}
 
 	int32_t Controller::getMotorPosition() const
 	{
-		return m_motorDriver.getEncoderCounts();
+		return m_pMotorDriver->getEncoderCounts();
 	}
 
 	uint16_t Controller::getMotorPwmLevel() const
 	{
-		return static_cast<uint16_t>(m_motorDriver.getPwmDutyCycle());
+		return static_cast<uint16_t>(m_pMotorDriver->getPwmDutyCycle());
 	}
 
 	void Controller::sendCommand(bool forwardDirection, uint16_t dutyCycle, uint16_t rampTimeMs)

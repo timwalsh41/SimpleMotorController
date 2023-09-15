@@ -19,8 +19,6 @@ namespace MessageHandling
 	{
 		SingletonFactory factory;
 		m_pLogger = factory.retrieve<Logging::ILogger>();
-
-		// TODO: set up tx/rx callbacks
 	}
 
 	OutputGateway::~OutputGateway()

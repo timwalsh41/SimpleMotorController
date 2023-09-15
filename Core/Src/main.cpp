@@ -27,8 +27,11 @@
 #include "MessageHandler.h"
 #include "CurrentSensor.h"
 #include "Controller.h"
+#include "IMotorDriver.h"
+#include "PololuG2MotorDriver.h"
 #include "MotorCommandHandler.h"
 #include "STM32Timebase.h"
+#include "IUartWrapper.h"
 #include "StmUartWrapper.h"
 #include "Version.h"
 #include "Utility.h"
@@ -46,6 +49,7 @@ using MessageHandling::OutputGateway;
 using Sensors::CurrentSensor;
 using MotorControl::Controller;
 using MotorControl::MotorCommandHandler;
+using MotorControl::PololuG2MotorDriver;
 using Logging::Logger;
 
 /* USER CODE END PTD */
@@ -115,13 +119,16 @@ int main(void)
   // create UART wrapper around uart2 interface
   StmUartWrapper uartWrapper(&huart2);
 
+  // create the motor driver (does not use logging)
+  PololuG2MotorDriver theMotorDriver;
+
   // create the logging singleton as that is accessed by all other objects
   std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logger>();
 
   // Output gateway, current sensor, and controller only requires the logger
-  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>(&uartWrapper);
+  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>(static_cast<IUartWrapper*>(&uartWrapper));
   std::shared_ptr<CurrentSensor> pCurrentSensor = factory.create<CurrentSensor>();
-  std::shared_ptr<Controller> pController = factory.create<Controller>();
+  std::shared_ptr<Controller> pController = factory.create<Controller>(static_cast<IMotorDriver*>(&theMotorDriver));
 
   // command handler requires logger and controller
   MotorCommandHandler theMotorCommandHandler(pController);

@@ -10,7 +10,7 @@
 
 #include <memory>
 #include "MotorControlState.h"
-#include "PololuG2MotorDriver.h"
+#include "IMotorDriver.h"
 #include "ILogger.h"
 
 namespace MotorControl
@@ -19,7 +19,7 @@ namespace MotorControl
 
 	class Controller {
 	public:
-		Controller();
+		Controller(IMotorDriver*);
 
 		void tick();
 		void updateSpeed();
@@ -38,20 +38,20 @@ namespace MotorControl
 		int32_t getMotorPosition() const;
 		uint16_t getMotorPwmLevel() const;
 
-		void setMaxDutyCycle(uint16_t maxDutyCycle) { m_motorDriver.setMaxDutyCycle(maxDutyCycle); }
-		uint16_t getMaxDutyCycle() const { return m_motorDriver.getMaxDutyCycle(); }
+		void setMaxDutyCycle(uint16_t maxDutyCycle) { m_pMotorDriver->setMaxDutyCycle(maxDutyCycle); }
+		uint16_t getMaxDutyCycle() const { return m_pMotorDriver->getMaxDutyCycle(); }
 
 		uint32_t getState() const { return m_state->getId(); }
 		uint32_t getTimeInState() const { return m_state->timeInState(); }
-		bool isDriverSleeping() const { return m_motorDriver.isDriverSleeping(); }
-		bool isDriverFaulted() const { return m_motorDriver.isDriverFaulted(); }
+		bool isDriverSleeping() const { return m_pMotorDriver->isDriverSleeping(); }
+		bool isDriverFaulted() const { return m_pMotorDriver->isDriverFaulted(); }
 
 		float getMotorSpeed() const { return m_bufferedMotorSpeed; }
 
 	private:
 		void updateState(std::unique_ptr<MotorControlState>&);
 
-		PololuG2MotorDriver m_motorDriver;
+		IMotorDriver* m_pMotorDriver;
 		std::unique_ptr<MotorControlState> m_state{nullptr};
 
 		// motor speed is measured in units of encoder counts per tick

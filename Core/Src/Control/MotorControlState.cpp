@@ -12,7 +12,7 @@
 namespace MotorControl
 {
 
-	MotorControlState::MotorControlState(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+	MotorControlState::MotorControlState(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 			m_pMotorDriver{pMotorDriver},
 			m_pLogger{pLogger}
 	{
@@ -47,7 +47,7 @@ namespace MotorControl
 		// ***** DISABLED STATE ******
 		// ***************************
 
-		Disabled::Disabled(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+		Disabled::Disabled(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->wakeMotor();
@@ -91,7 +91,7 @@ namespace MotorControl
 		// ******* IDLE STATE ********
 		// ***************************
 
-		Idle::Idle(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+		Idle::Idle(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->enableMotor();
@@ -142,7 +142,7 @@ namespace MotorControl
 		// ****** FAULT STATE ********
 		// ***************************
 
-		Fault::Fault(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+		Fault::Fault(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->disableMotor();
@@ -183,7 +183,7 @@ namespace MotorControl
 		// ****** SLEEPING STATE ********
 		// ***************************
 
-		Sleeping::Sleeping(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+		Sleeping::Sleeping(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 				MotorControlState(pMotorDriver, pLogger)
 		{
 			m_pMotorDriver->sleepMotor();
@@ -225,7 +225,7 @@ namespace MotorControl
 		// ******** RAMP STATE *******
 		// ***************************
 
-		Ramp::Ramp(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger, std::unique_ptr<MotorCommand>& pMotorCommand) :
+		Ramp::Ramp(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger, std::unique_ptr<MotorCommand>& pMotorCommand) :
 				MotorControlState(pMotorDriver, pLogger),
 				m_pMotorCommand{std::move(pMotorCommand)}
 		{
@@ -368,7 +368,7 @@ namespace MotorControl
 		// ****** RUNNING STATE ******
 		// ***************************
 
-		Running::Running(PololuG2MotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
+		Running::Running(IMotorDriver* pMotorDriver, std::shared_ptr<Logging::ILogger>& pLogger) :
 				MotorControlState(pMotorDriver, pLogger)
 		{
 			std::stringstream logStringStream;
