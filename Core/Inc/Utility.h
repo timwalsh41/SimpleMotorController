@@ -13,6 +13,7 @@
 namespace Utility
 {
 	void delayCycles(uint32_t);
+	uint32_t timeElapsed(uint32_t, uint32_t);
 
 } /* namespace Utility */
 

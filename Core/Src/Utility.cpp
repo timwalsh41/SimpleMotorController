@@ -18,4 +18,13 @@ namespace Utility
 			__asm volatile ("nop");
 	}
 
+	// calculate time elapsed, allowing for rollover
+	uint32_t timeElapsed(uint32_t begin, uint32_t end)
+	{
+		if (end > begin)
+			return end - begin;
+		else
+			return UINT32_MAX - begin + end + 1;
+	}
+
 } /* namespace Utility */
