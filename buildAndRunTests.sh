@@ -1,5 +1,7 @@
 #!/bin/bash
 
+run_tests=true
+
 for arg in "$@"
 do
     if [[ $arg == "--reset" ]]; then
@@ -7,6 +9,8 @@ do
         # executables/content
         echo "Removing existing build directory"
         rm -rf build
+    elif [[ $arg == "--norun" ]]; then
+        run_tests=false
     else
         echo "unknown option: $arg"
     fi
@@ -18,7 +22,10 @@ cmake -S . -B build
 echo
 echo "Building tests"
 cmake --build build
-echo
-echo "Running tests"
-cd build && ctest --output-on-failure
-cd ..
+
+if [[ "$run_tests" == true ]]; then
+    echo
+    echo "Running tests"
+    cd build && ctest --output-on-failure
+    cd ..
+fi

@@ -64,11 +64,18 @@ namespace MotorControl
 		}
 	}
 
-	// Motor fault detected, e.g. by GPIO interrupt
-	void Controller::motorFault()
+	// Motor fault detected, e.g. by GPIO interrupt, or for testing
+	void Controller::injectFault()
 	{
 		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
 		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});
+		updateState(nextState);
+	}
+
+	void Controller::clearFault()
+	{
+		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
+		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
 		updateState(nextState);
 	}
 
@@ -126,7 +133,10 @@ namespace MotorControl
 	void Controller::idleMotor()
 	{
 		// TODO: this assumes tick time is 1 ms, otherwise a conversion is needed
-		std::unique_ptr<MotorCommand> cmd = std::make_unique<MotorCommand>(true, false, 0, DEFAULT_RAMP_TIME_MS);
+		// make sure we're ramping fast enough, the command will fail if our duty cycle change is less than the
+		// ramp time
+		uint16_t rampTime_ms = std::min(DEFAULT_RAMP_TIME_MS, getDutyCycle());
+		std::unique_ptr<MotorCommand> cmd = std::make_unique<MotorCommand>(true, false, 0, rampTime_ms);
 		std::unique_ptr<MotorControlState> nextState = m_state->handleEvent(MotorEvent{MOTOR_COMMAND, cmd});
 		updateState(nextState);
 	}

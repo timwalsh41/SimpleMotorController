@@ -9,6 +9,7 @@
 #include "SingletonFactory.h"
 #include "Utility.h"
 #include <sstream>
+#include <algorithm>
 
 namespace MotorControl
 {
@@ -245,9 +246,15 @@ namespace MotorControl
 				// state exit time is the ramp time plus the state entry time
 				m_stateExitTime = m_stateEntryTime + m_pMotorCommand->rampTimeTicks;
 
+				// clamp the target duty cycle to the max
+				m_targetDutyCycle = std::clamp(m_pMotorCommand->pwmDutyCycle,
+											   static_cast<int32_t>(0),
+											   static_cast<int32_t>(m_pMotorDriver->getMaxDutyCycle()));
+
 				// process motor command
-				if (m_pMotorCommand->pwmDutyCycle == 0)
+				if (m_targetDutyCycle == 0)
 				{
+					// ramping to zero/idle
 					m_pMotorCommand->directionChange = false;
 
 					if (m_pMotorDriver->getPwmDutyCycle() == 0)
@@ -260,29 +267,46 @@ namespace MotorControl
 					{
 						// we are ramping down to zero
 						m_dutyCycleChangeRate = m_pMotorDriver->getPwmDutyCycle()/m_pMotorCommand->rampTimeTicks*-1;
+
+						std::stringstream logStringStream;
+						logStringStream << "Motor controller ramping from " << (m_pMotorDriver->getForwardDirection() ? "forward" : "reverse") <<
+								":" << m_pMotorDriver->getPwmDutyCycle() << " to " << (m_pMotorCommand->forwardDirection ? "forward" : "reverse") <<
+								":" << m_targetDutyCycle << " with change rate " << m_dutyCycleChangeRate << " per tick";
+
+						m_pLogger->logString(info, logStringStream.str());
 					}
 				}
-				else
+				else // m_targetDutyCycle > 0
 				{
 					if (m_pMotorDriver->getPwmDutyCycle() == 0)
 					{
 						// we are ramping from zero
 						m_pMotorDriver->setForwardDirection(m_pMotorCommand->forwardDirection);
-						m_dutyCycleChangeRate = m_pMotorCommand->pwmDutyCycle/m_pMotorCommand->rampTimeTicks;
+						m_dutyCycleChangeRate = m_targetDutyCycle/m_pMotorCommand->rampTimeTicks;
 						m_pMotorCommand->directionChange = false;
 					}
 					else if (m_pMotorCommand->forwardDirection == m_pMotorDriver->getForwardDirection())
 					{
 						// ramping between speeds in same direction
-
-						int32_t dutyCycleDelta = m_pMotorCommand->pwmDutyCycle - m_pMotorDriver->getPwmDutyCycle();
-						m_dutyCycleChangeRate = dutyCycleDelta/m_pMotorCommand->rampTimeTicks;
 						m_pMotorCommand->directionChange = false;
+
+						if (m_targetDutyCycle == m_pMotorDriver->getPwmDutyCycle())
+						{
+							// no change in duty cycle, just exit
+							m_stateExitTime = m_stateEntryTime;
+							m_dutyCycleChangeRate = 0;
+						}
+						else
+						{
+							// set up ramp
+							int32_t dutyCycleDelta = m_targetDutyCycle - m_pMotorDriver->getPwmDutyCycle();
+							m_dutyCycleChangeRate = dutyCycleDelta/static_cast<int32_t>(m_pMotorCommand->rampTimeTicks);
+						}
 					}
 					else
 					{
 						// ramping with direction change
-						int32_t dutyCycleDelta = m_pMotorDriver->getPwmDutyCycle() + m_pMotorCommand->pwmDutyCycle;
+						int32_t dutyCycleDelta = m_pMotorDriver->getPwmDutyCycle() + m_targetDutyCycle;
 						m_dutyCycleChangeRate = dutyCycleDelta/m_pMotorCommand->rampTimeTicks*-1;
 						m_pMotorCommand->directionChange = true;
 					}
@@ -290,9 +314,17 @@ namespace MotorControl
 					std::stringstream logStringStream;
 					logStringStream << "Motor controller ramping from " << (m_pMotorDriver->getForwardDirection() ? "forward" : "reverse") <<
 							":" << m_pMotorDriver->getPwmDutyCycle() << " to " << (m_pMotorCommand->forwardDirection ? "forward" : "reverse") <<
-							":" << m_pMotorCommand->pwmDutyCycle << " with change rate " << m_dutyCycleChangeRate << " per tick";
+							":" << m_targetDutyCycle << " with change rate " << m_dutyCycleChangeRate << " per tick";
 
 					m_pLogger->logString(info, logStringStream.str());
+				}
+
+				if (m_dutyCycleChangeRate == 0 && m_stateExitTime != m_stateEntryTime)
+				{
+					// provided ramp rate is too slow, we need to change at least one tenth of a percent (e.g. 1 step)
+					// per tick
+					m_pLogger->logString(error, "Ramp rate is too low, must be at least one tenth of a percent per tick");
+					m_stateExitTime = m_stateEntryTime;
 				}
 			}
 		}
@@ -320,13 +352,16 @@ namespace MotorControl
 					// we should exit
 					if (m_pTimebase->getTime_ms() >= m_stateExitTime && m_pTimebase->getTime_ms() < (m_stateExitTime + 1000))
 					{
-						// ensure we've got the correct final duty cycle
-						m_pMotorDriver->setPwmDutyCycle(m_pMotorCommand->pwmDutyCycle);
-
-						m_pLogger->logString(info, "Ramp finished");
+						// verify final duty cycle (as long as we are supposed to be changing it)
+						if (m_dutyCycleChangeRate != 0)
+						{
+							// ensure we've got the correct final duty cycle
+							m_pMotorDriver->setPwmDutyCycle(m_targetDutyCycle);
+							m_pLogger->logString(info, "Ramp finished");
+						}
 
 						// exit to the correct state
-						if (m_pMotorCommand->pwmDutyCycle == 0)
+						if (m_pMotorDriver->getPwmDutyCycle() == 0)
 							return std::make_unique<Idle>(m_pMotorDriver, m_pLogger);
 						else
 							return std::make_unique<Running>(m_pMotorDriver, m_pLogger);
@@ -356,7 +391,7 @@ namespace MotorControl
 						}
 
 						m_pLogger->logString(info, std::string("Updating PWM duty cycle to ") + std::to_string(newDutyCycle));
-						m_pMotorDriver->setPwmDutyCycle(newDutyCycle);
+						m_pMotorDriver->setPwmDutyCycle(static_cast<int32_t>(newDutyCycle));
 					}
 
 					return nullptr;

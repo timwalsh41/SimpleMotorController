@@ -127,6 +127,10 @@ void MessageHandler::buildCommandMap()
 			{
 				return m_pMotorCommandHandler->wakeDriver(msg, payload);
 			};
+	m_commandMap[CMD_CLEAR_FAULT] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->clearFault(msg, payload);
+				};
 	m_commandMap[CMD_GET_MOTOR_POS] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				return m_pMotorCommandHandler->getMotorPosition(msg, payload);

@@ -16,6 +16,15 @@ namespace MotorControl
 		zeroEncoder();
 	}
 
+	void PololuG2MotorDriver::disableMotor()
+	{
+		m_dutyCycle = 0;
+		m_motorEnabled = false;
+
+		// set the HW duty cycle immediately, don't wait for next update
+		setHwDutyCycle(0);
+	}
+
 	// update routine to run at regular intervals by parent object
 	void PololuG2MotorDriver::update()
 	{
@@ -25,33 +34,27 @@ namespace MotorControl
 
 	void PololuG2MotorDriver::setPwmDutyCycle(int32_t dutyCycle)
 	{
-		// duty cycle is provided as tenths of a percent of maximum, we convert here to timer ticks
-		int32_t newDutyCycle_ticks = dutyCycle*m_maxDutyCycle/1000;
-		m_dutyCycle = std::clamp(newDutyCycle_ticks, static_cast<int32_t>(0), m_maxDutyCycle);
+		// duty cycle is provided/stored as tenths of a percent of maximum
+		m_dutyCycle = std::clamp(dutyCycle, static_cast<int32_t>(0), m_maxDutyCycle);
 	}
 
 	int32_t PololuG2MotorDriver::getPwmDutyCycle() const
 	{
-		// duty cycle is stored as timer ticks, we convert here to tenths of a percent of maximum drive
-		return (m_dutyCycle*1000/m_maxDutyCycle);
+		// duty cycle is provided/stored as tenths of a percent of maximum
+		return m_dutyCycle;
 	}
 
 	void PololuG2MotorDriver::setMaxDutyCycle(uint16_t maxDutyCycle_pct)
 	{
-		// max duty cycle is provided in tenths of a percent, we convert here to raw timer counts and update the duty cycle
-		// first clamp to the range 0 to 100% (or 0 to 1000 tenths of a percent)
-		maxDutyCycle_pct = std::clamp(static_cast<int>(maxDutyCycle_pct), 0, 1000);
-
-		// now convert from tenths of a percent to timer ticks and clamp to the minimum allowed max DC level
-		m_maxDutyCycle = std::max(static_cast<int32_t>(maxDutyCycle_pct)*static_cast<int32_t>(DUTY_CYCLE_MAX_LIMIT)/1000,
-									DUTY_CYCLE_MAX_MIN_LIMIT);
+		// max duty cycle is provided in tenths of a percent, and we will clamp here to the minimum limit for this
+		// setting, and 100%
+		m_maxDutyCycle = std::clamp(static_cast<int>(maxDutyCycle_pct), static_cast<int>(DUTY_CYCLE_MAX_MIN_LIMIT), 1000);
 	}
 
 	uint16_t PololuG2MotorDriver::getMaxDutyCycle() const
 	{
 		// we store duty cycle in timer ticks, we need to convert here to tenths of a percent of the max duty cycle limit
-
-		return static_cast<uint16_t>(m_maxDutyCycle * 1000 / DUTY_CYCLE_MAX_LIMIT);
+		return static_cast<uint16_t>(m_maxDutyCycle);
 	}
 
 	void PololuG2MotorDriver::updateEncoder()
@@ -76,7 +79,7 @@ namespace MotorControl
 			m_motorEnabled = false;
 
 			// stop the motor
-			TIM2->CCR1 = m_dutyCycle;
+			setHwDutyCycle(0);
 
 			// assert the SLP_ pin
 			HAL_GPIO_WritePin(SLP__GPIO_Port, SLP__Pin, GPIO_PIN_RESET);
@@ -88,14 +91,22 @@ namespace MotorControl
 
 			if (m_motorEnabled)
 			{
-				TIM2->CCR1 = m_dutyCycle;
+				// convert duty cycle from tenths of a percent of the limit to timer ticks
+				setHwDutyCycle(static_cast<uint32_t>(m_dutyCycle*DUTY_CYCLE_LIMIT/1000);
 				HAL_GPIO_WritePin(DIR_GPIO_Port, DIR_Pin, m_motorDirectionForward ? GPIO_PIN_SET : GPIO_PIN_RESET);
 			}
 			else
 			{
-				TIM2->CCR1 = 0;
+				setHwDutyCycle(0);
 			}
 		}
+	}
+
+	// write the duty cycle setting to the timer 2 control register
+	// no input checking here on this private function
+	void PololuG2MotorDriver::setHwDutyCycle(uint32_t dutyCycle)
+	{
+		TIM2->CCR1 = dutyCycle;
 	}
 
 	bool PololuG2MotorDriver::isDriverFaulted() const

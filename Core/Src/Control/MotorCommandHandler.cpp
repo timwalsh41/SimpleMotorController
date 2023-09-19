@@ -8,6 +8,7 @@
 #include "MotorCommandHandler.h"
 #include "SingletonFactory.h"
 #include <cstring>
+#include <algorithm>
 
 namespace MotorControl {
 	MotorCommandHandler::MotorCommandHandler(std::shared_ptr<Controller>& pController) :
@@ -110,6 +111,21 @@ namespace MotorControl {
 			return false;
 		}
 
+		// Check that change rate is at least one tenth of a percent per ms/tick and fail command if not
+		uint16_t targetDutyCycle{0};
+		std::memcpy(&targetDutyCycle, &msg.getPayload().data()[0], 2);
+
+		int32_t dutyCycleChange = std::abs(static_cast<int32_t>(m_pController->getDutyCycle()) -
+								  static_cast<int32_t>(std::clamp(targetDutyCycle,
+										  	  	  	  	  	      static_cast<uint16_t>(0),
+																  m_pController->getMaxDutyCycle())));
+
+		if (dutyCycleChange < rampTime_ms)
+		{
+			m_pLogger->logString(error, "Duty cycle change rate is too low for ramp command");
+			return false;
+		}
+
 		// convert drive level from tenths of a percent to PWM duty cycle
 		uint32_t dutyCycle = static_cast<uint32_t>(driveLevel)*static_cast<uint32_t>(m_pController->getMaxDutyCycle())/1000;
 
@@ -134,6 +150,8 @@ namespace MotorControl {
 			m_pLogger->logString(error, "Invalid ramp time in ramp motor off command: " + std::to_string(rampTime_ms));
 			return false;
 		}
+
+		// TODO: check that change rate is at least one tenth of a percent per ms/tick and fail command if not
 
 		m_pController->sendCommand(0, 0, rampTime_ms);
 		return true;
@@ -164,7 +182,13 @@ namespace MotorControl {
 
 	bool MotorCommandHandler::injectFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
-		m_pController->motorFault();
+		m_pController->injectFault();
+		return true;
+	}
+
+	bool MotorCommandHandler::clearFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		m_pController->clearFault();
 		return true;
 	}
 

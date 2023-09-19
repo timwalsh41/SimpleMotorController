@@ -19,6 +19,8 @@ public:
 	int32_t getPwmDutyCycle() { return m_pwmDutyCycle; }
 	bool getForwardDirection() { return m_bForwardDirection; }
 	void setForwardDirection(bool direction) { m_bForwardDirection = direction; }
+	uint16_t getMaxDutyCycle() { return 1000; }
+	void disableMotor() { m_pwmDutyCycle = 0; }
 
 private:
 	int32_t m_pwmDutyCycle{0};
@@ -58,6 +60,12 @@ public:
 		});
 		ON_CALL(*this, setForwardDirection).WillByDefault([this](bool direction) {
 		  return fake_.setForwardDirection(direction);
+		});
+		ON_CALL(*this, getMaxDutyCycle).WillByDefault([this]() {
+		  return fake_.getMaxDutyCycle();
+		});
+		ON_CALL(*this, disableMotor).WillByDefault([this]() {
+		  return fake_.disableMotor();
 		});
 	}
 

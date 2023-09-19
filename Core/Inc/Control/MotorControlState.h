@@ -131,6 +131,7 @@ namespace MotorControl
 			uint32_t m_stateExitTime{0};
 			int32_t m_dutyCycleChangeRate{0};
 			int32_t m_initialDutyCycle{0};
+			int32_t m_targetDutyCycle{0};
 		};
 
 		class Running : public MotorControlState

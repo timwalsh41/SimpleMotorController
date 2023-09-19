@@ -23,7 +23,7 @@ namespace MotorControl
 		void update() override;
 
 		void enableMotor() override { m_dutyCycle = 0; m_motorEnabled = true; }
-		void disableMotor() override { m_dutyCycle = 0; m_motorEnabled = false; }
+		void disableMotor() override;
 		bool isMotorEnabled() const override { return m_motorEnabled; }
 
 		void setForwardDirection(bool isForward) override { m_motorDirectionForward = isForward; }
@@ -50,9 +50,11 @@ namespace MotorControl
 		bool m_motorDirectionForward{true};
 		bool m_isSleeping{false};
 
-		int32_t m_dutyCycle{0};
+		int32_t m_dutyCycle{0};			// stored as tenths of a percent of the limit
 		int32_t m_encoderCount{0};
-		int32_t m_maxDutyCycle{DEFAULT_MAX_DUTY_CYCLE};
+		int32_t m_maxDutyCycle{750};	// stored as tenths of a percent of the limit
+
+		void setHwDutyCycle(int32_t);
 
 		void updateEncoder();
 		void zeroEncoder();

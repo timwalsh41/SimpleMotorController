@@ -24,7 +24,8 @@ namespace MotorControl
 		void tick();
 		void updateSpeed();
 
-		void motorFault();
+		void injectFault();
+		void clearFault();
 
 		void enableMotor();
 		void disableMotor();
@@ -40,6 +41,7 @@ namespace MotorControl
 
 		void setMaxDutyCycle(uint16_t maxDutyCycle) { m_pMotorDriver->setMaxDutyCycle(maxDutyCycle); }
 		uint16_t getMaxDutyCycle() const { return m_pMotorDriver->getMaxDutyCycle(); }
+		uint16_t getDutyCycle() const { return m_pMotorDriver->getPwmDutyCycle(); }
 
 		uint32_t getState() const { return m_state->getId(); }
 		uint32_t getTimeInState() const { return m_state->timeInState(); }

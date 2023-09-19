@@ -748,7 +748,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	// TODO: test that this actually works
 	if (GPIO_Pin == FLT__Pin)
 		if (HAL_GPIO_ReadPin(FLT__GPIO_Port, FLT__Pin) == GPIO_PIN_RESET)
-			pController->motorFault();
+			pController->injectFault();
 }
 
 /* USER CODE END 4 */

@@ -30,6 +30,7 @@ public:
 	bool rampMotorOff(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool setMaxDutyCycle(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 	bool injectFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+	bool clearFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 private:
 	std::shared_ptr<Controller> m_pController;
 	std::shared_ptr<Logging::ILogger> m_pLogger;
