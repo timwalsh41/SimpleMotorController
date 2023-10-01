@@ -6,19 +6,16 @@
  */
 
 #include "Logger.h"
+#include "IOutputGateway.h"
 #include "SingletonFactory.h"
 #include <string>
-
-#ifdef DEBUG
-extern MessageHandling::OutputGateway theOutputGateway;
-#endif
 
 namespace Logging
 {
 	Logger::Logger()
 	{
 		SingletonFactory factory;
-		m_pOutputGateway = factory.retrieve<MessageHandling::OutputGateway>();
+		m_pOutputGateway = factory.retrieve<IOutputGateway>();
 	}
 
 	void Logger::logString(LogLevel level, const std::string& msg)

@@ -10,7 +10,7 @@
 
 #include "ILogger.h"
 #include "ITimebase.h"
-#include "OutputGateway.h"
+#include "IOutputGateway.h"
 #include <queue>
 #include <memory>
 
@@ -42,7 +42,7 @@ namespace Logging
 		bool logMessagesPending() override;
 		bool retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	private:
-		std::shared_ptr<MessageHandling::OutputGateway> m_pOutputGateway;
+		std::shared_ptr<IOutputGateway> m_pOutputGateway;
 		std::queue<LogMessage> m_logMessageQueue{};
 		uint32_t m_logLength_char{0};
 	};

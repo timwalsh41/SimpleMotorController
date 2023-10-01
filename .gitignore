@@ -1,4 +1,6 @@
 Debug/
 Release/
 build/
+Core/Test/MockMemoryLeak/
+.vscode/
 2023-09 To do tracking

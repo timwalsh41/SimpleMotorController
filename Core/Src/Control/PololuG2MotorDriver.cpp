@@ -92,7 +92,7 @@ namespace MotorControl
 			if (m_motorEnabled)
 			{
 				// convert duty cycle from tenths of a percent of the limit to timer ticks
-				setHwDutyCycle(static_cast<uint32_t>(m_dutyCycle*DUTY_CYCLE_LIMIT/1000);
+				setHwDutyCycle(static_cast<int32_t>(m_dutyCycle*DUTY_CYCLE_LIMIT/1000));
 				HAL_GPIO_WritePin(DIR_GPIO_Port, DIR_Pin, m_motorDirectionForward ? GPIO_PIN_SET : GPIO_PIN_RESET);
 			}
 			else
@@ -104,7 +104,7 @@ namespace MotorControl
 
 	// write the duty cycle setting to the timer 2 control register
 	// no input checking here on this private function
-	void PololuG2MotorDriver::setHwDutyCycle(uint32_t dutyCycle)
+	void PololuG2MotorDriver::setHwDutyCycle(int32_t dutyCycle)
 	{
 		TIM2->CCR1 = dutyCycle;
 	}

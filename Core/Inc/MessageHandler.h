@@ -16,9 +16,8 @@
 #include "Message.h"
 #include "IMessageHandler.h"
 #include "ILogger.h"
-#include "OutputGateway.h"
-#include "Controller.h"
-#include "MotorCommandHandler.h"
+#include "IOutputGateway.h"
+#include "IMotorCommandHandler.h"
 #include "CurrentSensor.h"
 
 namespace MessageHandling
@@ -37,11 +36,9 @@ namespace MessageHandling
 		void buildCommandMap();
 
 		std::shared_ptr<Logging::ILogger> m_pLogger;
-		std::shared_ptr<MotorControl::Controller> m_pController;
-		std::shared_ptr<MotorControl::MotorCommandHandler> m_pMotorCommandHandler;
-		std::shared_ptr<MessageHandling::OutputGateway> m_pOutputGateway;
+		std::shared_ptr<IMotorCommandHandler> m_pMotorCommandHandler;
+		std::shared_ptr<IOutputGateway> m_pOutputGateway;
 		std::shared_ptr<Sensors::CurrentSensor> m_pCurrentSensor;
-
 
 		std::queue<Message> m_messageQueue;
 		std::unordered_map<uint8_t, std::function<bool(const Message&, std::vector<uint8_t>&)>> m_commandMap;

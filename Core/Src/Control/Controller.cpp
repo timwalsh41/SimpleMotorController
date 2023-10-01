@@ -49,6 +49,7 @@ namespace MotorControl
 		m_instantaneousMotorSpeed = static_cast<float>(currentEncoderCount - m_lastEncoderCount);
 		m_bufferedMotorSpeed += (static_cast<float>(m_instantaneousMotorSpeed) -
 								 m_pMotorSpeedBuffer[m_speedBufferIdx]) / VELOCITY_BUFFER_SIZE;
+		m_lastEncoderCount = currentEncoderCount;
 		m_pMotorSpeedBuffer[m_speedBufferIdx++] = m_instantaneousMotorSpeed;
 		if (m_speedBufferIdx == VELOCITY_BUFFER_SIZE)
 			m_speedBufferIdx = 0;

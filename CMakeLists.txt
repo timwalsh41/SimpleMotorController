@@ -5,6 +5,12 @@ project(SimpleMotorControl)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# we default to Release build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+
 include(FetchContent)
 FetchContent_Declare(
   googletest

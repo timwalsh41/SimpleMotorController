@@ -711,6 +711,38 @@ TEST_F(ControllerTest, InjectFaultAndClear) {
     EXPECT_EQ(m_pController->getState(), MotorControl::DISABLED);
 }
 
+
+TEST_F(ControllerTest, MotorSpeedData) {
+    // number of encoder pulses to elapse per tick
+    int encoderValue{0};
+    int encoderPulsesPerTick{30};
+
+    // delegate calls to the fake motor driver object (keeps track of PWM and direction settings)
+    m_motorDriver.DelegateToFake();
+
+    for (size_t i = 0; i < MotorControl::VELOCITY_BUFFER_SIZE; ++i)
+    {
+        EXPECT_CALL(m_motorDriver, getEncoderCounts()).Times(1).WillOnce(Return(encoderValue));
+        encoderValue += encoderPulsesPerTick;
+        m_pController->tick();
+    }
+    
+    EXPECT_NEAR(m_pController->getMotorSpeed(), encoderPulsesPerTick, 1);
+    
+    for (size_t i = 0; i < MotorControl::VELOCITY_BUFFER_SIZE; ++i)
+    {
+        EXPECT_CALL(m_motorDriver, getEncoderCounts()).Times(1).WillOnce(Return(encoderValue));
+        encoderValue -= encoderPulsesPerTick;
+        m_pController->tick();
+    }
+   
+    EXPECT_NEAR(m_pController->getMotorSpeed(), -1*encoderPulsesPerTick, 1);
+}
+
+TEST_F(ControllerTest, ControllerStateTransitions) {
+
+}
+
 // TODO: Rewrite code for ramp tick, instead of just adding the duty cycle change rate at each tick, instead calculate time from ramp start
 // and multiply that by the change rate, and add to the original PWM rate (need to save that); need to redesign how we handle direction
 // change in that case
@@ -751,5 +783,5 @@ TEST_F(ControllerTest, InjectFaultAndClear) {
 // [x] Test ramp on/off timing, states, and driver calls
 // [x] idleMotor call
 // [x] Inject & clear fault
-// [ ] Call tick function - inject dummy speed data, verify speed calculation and reporting
-// [ ] Event handling by state
+// [x] Call tick function - inject dummy speed data, verify speed calculation and reporting
+// [-] Event handling by state - not going to do this, this is too low level, if the above tests are passing that is sufficient

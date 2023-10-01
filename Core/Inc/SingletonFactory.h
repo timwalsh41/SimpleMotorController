@@ -66,6 +66,11 @@ public:
     	return std::static_pointer_cast<StorageType>(singletons[key]);
     }
 
+    void clearSingletons()
+    {
+    	singletons.clear();
+    }
+
 private:
     static std::map<void (*)(), std::shared_ptr<void>> singletons;
 };

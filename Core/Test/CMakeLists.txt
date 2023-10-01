@@ -96,10 +96,34 @@ target_link_libraries(
 target_include_directories(ControllerTest PUBLIC 
     ../Inc/ 
     ../Inc/Control 
-    #../../Drivers/STM32L4xx_HAL_Driver/Inc 
-    #../../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy
-    #../../Drivers/CMSIS/Device/ST/STM32L4xx/Include
-    #../../Drivers/CMSIS/Include
     )
 
 gtest_discover_tests(ControllerTest)
+
+
+#******** MESSAGEHANDLER TEST *******************
+
+add_executable(
+  MessageHandlerTest
+  MessageHandlerTest.cpp
+  MockLogger.cpp
+  ../Src/SingletonFactory.cpp
+  ../Src/TestTimebase.cpp
+  ../Src/MessageHandler.cpp
+  ../Src/Message.cpp
+  ../Src/CurrentSensor.cpp
+  ../Src/Version.cpp
+)
+
+target_link_libraries(
+  MessageHandlerTest
+  GTest::gtest_main
+  GTest::gmock_main
+)
+
+target_include_directories(MessageHandlerTest PUBLIC 
+    ../Inc/ 
+    ../Inc/Control 
+    )
+
+gtest_discover_tests(MessageHandlerTest)

@@ -32,7 +32,7 @@ namespace MessageHandling
 		m_logStringQueue.push(std::move(msg));
 	}
 
-	void OutputGateway::sendMessage(const Message& msg)
+	void OutputGateway::sendMessage(Message& msg)
 	{
 		m_messageQueue.push(std::move(msg));
 	}

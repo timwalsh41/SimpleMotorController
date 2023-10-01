@@ -243,6 +243,15 @@ namespace MotorControl
 			}
 			else
 			{
+				if (m_pMotorCommand->rampTimeTicks == 0)
+				{
+					m_pLogger->logString(error, "Invalid motor command (ramp time = 0)");
+					m_targetDutyCycle = m_pMotorDriver->getPwmDutyCycle();
+					m_stateExitTime = m_stateEntryTime;
+					m_dutyCycleChangeRate = 0;
+					return;
+				}
+
 				// state exit time is the ramp time plus the state entry time
 				m_stateExitTime = m_stateEntryTime + m_pMotorCommand->rampTimeTicks;
 

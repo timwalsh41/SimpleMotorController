@@ -192,4 +192,37 @@ namespace MotorControl {
 		return true;
 	}
 
+	bool MotorCommandHandler::getStatus(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		// return payload is 8 bytes
+		payload.reserve(8);
+
+		// byte 0: motor controller state
+		payload.push_back(static_cast<uint8_t>(m_pController->getState()));
+
+		// byte 1: bitmapped status byte
+		uint8_t statusByte{0};
+		statusByte |= (m_pController->getMotorDirection() ? 1 : 0) << 0;	// bit 0: motor direction
+		statusByte |= (m_pController->isDriverFaulted() ? 1 : 0) << 1;	// bit 1: driver fault status
+		statusByte |= (m_pController->isDriverSleeping() ? 1 : 0) << 2;	// bit 2: driver sleep status
+		statusByte |= (m_pLogger->logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
+		payload.push_back(statusByte);
+
+		// bytes 2-3: motor drive level (tenths of a percent)
+		// TODO: verify endianness
+		uint16_t driveLevel = m_pController->getMotorPwmLevel();
+		payload.push_back(static_cast<uint8_t>((driveLevel >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((driveLevel >> 8) & 0xFF));
+
+		// bytes 4-7: time in current state (ms)
+		// TODO: verify endianness
+		uint32_t timeInState = m_pController->getTimeInState();
+		payload.push_back(static_cast<uint8_t>((timeInState >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((timeInState >> 8) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((timeInState >> 16) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((timeInState >> 24) & 0xFF));
+
+		return true;
+	}
+
 } /* namespace MotorControl */

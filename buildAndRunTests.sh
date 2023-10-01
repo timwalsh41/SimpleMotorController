@@ -25,7 +25,13 @@ cmake --build build
 
 if [[ "$run_tests" == true ]]; then
     echo
+    echo
     echo "Running tests"
+    echo "*******************"
+    echo "NOTE THAT SOME TESTS ARE SENSITIVE TO MILLISECOND SCALE TIMING, THEY MAY FAIL DUE TO LATENCY IN THE HOST OS; CAN TRY TO RERUN TO VERIFY FAILURE"
+    echo "*******************"
+    echo
+    echo
     cd build && ctest --output-on-failure
     cd ..
 fi

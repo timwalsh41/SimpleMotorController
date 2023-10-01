@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "SingletonFactory.h"
 #include "SerialParser.h"
+#include "IOutputGateway.h"
 #include "OutputGateway.h"
 #include "MessageHandler.h"
 #include "CurrentSensor.h"
@@ -126,12 +127,12 @@ int main(void)
   std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logger>();
 
   // Output gateway, current sensor, and controller only requires the logger
-  std::shared_ptr<OutputGateway> pOutputGateway = factory.create<OutputGateway>(static_cast<IUartWrapper*>(&uartWrapper));
+  std::shared_ptr<IOutputGateway> pOutputGateway = factory.create<IOutputGateway, OutputGateway>(static_cast<IUartWrapper*>(&uartWrapper));
   std::shared_ptr<CurrentSensor> pCurrentSensor = factory.create<CurrentSensor>();
   std::shared_ptr<Controller> pController = factory.create<Controller>(static_cast<IMotorDriver*>(&theMotorDriver));
 
   // command handler requires logger and controller
-  MotorCommandHandler theMotorCommandHandler(pController);
+  std::shared_ptr<IMotorCommandHandler> pMotorCommandHandler = factory.create<IMotorCommandHandler, MotorCommandHandler>(pController);
 
   // Message handler requires everything (logger, gateway, controller, current sensor, motor command handler)
   MessageHandler theMessageHandler;

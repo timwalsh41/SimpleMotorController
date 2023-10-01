@@ -11,6 +11,7 @@
 #include <queue>
 #include <string>
 #include <memory>
+#include "IOutputGateway.h"
 #include "Message.h"
 #include "CommandInterface.h"
 #include "ILogger.h"
@@ -19,7 +20,7 @@
 namespace MessageHandling
 {
 
-	class OutputGateway
+	class OutputGateway : public IOutputGateway
 	{
 	public:
 		OutputGateway(IUartWrapper*);
@@ -27,9 +28,9 @@ namespace MessageHandling
 		OutputGateway(const OutputGateway&) = delete;
 		OutputGateway& operator=(const OutputGateway&) = delete;
 
-		void addLogString(std::string& msg);
-		void sendMessage(const Message& msg);
-		void processOutgoingMessages();
+		void addLogString(std::string& msg) override;
+		void sendMessage(Message& msg) override;
+		void processOutgoingMessages() override;
 		void setReceiving() { m_receiving = true; }
 		void setTransmitting() { m_receiving = false; }
 
