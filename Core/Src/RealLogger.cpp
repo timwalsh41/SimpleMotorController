@@ -1,24 +1,23 @@
 /*
- * Logger.cpp
+ * RealLogger.cpp
  *
  *  Created on: Jul 14, 2023
  *      Author: tim
  */
 
-#include "Logger.h"
-#include "IOutputGateway.h"
+#include "RealLogger.h"
 #include "SingletonFactory.h"
 #include <string>
 
 namespace Logging
 {
-	Logger::Logger()
+	RealLogger::RealLogger()
 	{
 		SingletonFactory factory;
 		m_pOutputGateway = factory.retrieve<IOutputGateway>();
 	}
 
-	void Logger::logString(LogLevel level, const std::string& msg)
+	void RealLogger::logString(LogLevel level, const std::string& msg)
 	{
 #ifdef DEBUG
 		std::string logString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + msg;
@@ -44,7 +43,7 @@ namespace Logging
 	}
 
 	// return true if there are log messages pending for the host to retrieve
-	bool Logger::logMessagesPending()
+	bool RealLogger::logMessagesPending()
 	{
 #ifdef DEBUG
 		return false;
@@ -56,7 +55,7 @@ namespace Logging
 #endif
 	}
 
-	bool Logger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	bool RealLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
 		if (m_logMessageQueue.empty())
 		{

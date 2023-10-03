@@ -6,8 +6,8 @@
 #include <MockMessageHandler.h>
 #include <SerialParser.h>
 #include <CommandInterface.h>
-#include <ILogger.h>
-#include <MockLogger.h>
+#include <BaseLogger.h>
+#include <TestLogger.h>
 #include <iostream>
 #include <deque>
 #include <chrono>
@@ -20,7 +20,7 @@ class SerialParserTest : public ::testing::Test
         {
             SingletonFactory factory;
             std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
-            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+            std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, Logging::TestLogger>();
         }
         
         MockMessageHandler m_messageHandler{};

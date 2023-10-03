@@ -15,7 +15,7 @@ namespace MotorControl {
 			m_pController{pController}
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 	}
 
 	bool MotorCommandHandler::enableMotor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)

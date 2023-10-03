@@ -13,12 +13,6 @@
 #include <gmock/gmock.h>
 #include <iostream>
 
-enum MessageProcessingErrorCode
-{
-	NO_ERROR = 0,
-	BAD_CRC
-};
-
 class FakeOutputGateway
 {
 public:
@@ -28,12 +22,12 @@ public:
 		m_msg = std::move(msg);
 	}
 
-	MessageProcessingErrorCode processMessage()
+	uint8_t processMessage()
 	{
-		if (!m_msg.checkCRC())
-			return BAD_CRC;
+		if (m_msg.getPayload().size() == 1)
+			return m_msg.getPayload()[0];
 
-		return NO_ERROR;
+		return 0;
 	}
 
 private:
@@ -48,7 +42,7 @@ public:
 	MOCK_METHOD(void, addLogString, (std::string&), (override));
 	MOCK_METHOD(void, sendMessage, (MessageHandling::Message&), (override));
 	MOCK_METHOD(void, processOutgoingMessages, (), (override));
-	MOCK_METHOD(MessageProcessingErrorCode, processMessage, (), ());
+	MOCK_METHOD(uint8_t, processMessage, (), ());
 
 	void DelegateToFake()
 	{

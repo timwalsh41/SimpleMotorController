@@ -6,11 +6,9 @@
  */
 
 #include "Version.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "SingletonFactory.h"
 #include <memory>
-
-extern std::shared_ptr<Logging::ILogger> pLogger;
 
 namespace Utility
 {
@@ -18,7 +16,7 @@ namespace Utility
 	bool sendVersionMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& returnData)
 	{
 		SingletonFactory factory;
-		std::shared_ptr<Logging::ILogger> pLogger = factory.retrieve<Logging::ILogger>();
+		std::shared_ptr<Logging::BaseLogger> pLogger = factory.retrieve<Logging::BaseLogger>();
 
 		// check packet format
 		if (msg.getPayloadLength() > 0)

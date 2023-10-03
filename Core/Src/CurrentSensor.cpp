@@ -16,7 +16,7 @@ namespace Sensors
 	CurrentSensor::CurrentSensor()
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 
 		for (size_t i = 0; i < CURRENT_SENSOR_BUFFER_SIZE; ++i)
 		{

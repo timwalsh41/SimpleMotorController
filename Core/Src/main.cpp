@@ -36,8 +36,8 @@
 #include "StmUartWrapper.h"
 #include "Version.h"
 #include "Utility.h"
-#include "ILogger.h"
-#include "Logger.h"
+#include "BaseLogger.h"
+#include "RealLogger.h"
 #include <memory>
 /* USER CODE END Includes */
 
@@ -51,7 +51,7 @@ using Sensors::CurrentSensor;
 using MotorControl::Controller;
 using MotorControl::MotorCommandHandler;
 using MotorControl::PololuG2MotorDriver;
-using Logging::Logger;
+using Logging::RealLogger;
 
 /* USER CODE END PTD */
 
@@ -124,7 +124,7 @@ int main(void)
   PololuG2MotorDriver theMotorDriver;
 
   // create the logging singleton as that is accessed by all other objects
-  std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logger>();
+  std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, RealLogger>();
 
   // Output gateway, current sensor, and controller only requires the logger
   std::shared_ptr<IOutputGateway> pOutputGateway = factory.create<IOutputGateway, OutputGateway>(static_cast<IUartWrapper*>(&uartWrapper));

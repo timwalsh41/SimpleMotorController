@@ -14,7 +14,7 @@
 #include "IOutputGateway.h"
 #include "Message.h"
 #include "CommandInterface.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "IUartWrapper.h"
 
 namespace MessageHandling
@@ -43,7 +43,7 @@ namespace MessageHandling
 
 		std::queue<std::string> m_logStringQueue{};
 		std::queue<Message> m_messageQueue{};
-		std::shared_ptr<Logging::ILogger> m_pLogger;
+		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 		IUartWrapper* m_pUartWrapper;
 	};
 

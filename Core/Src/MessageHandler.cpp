@@ -18,7 +18,7 @@ namespace MessageHandling
 MessageHandler::MessageHandler()
 {
 	SingletonFactory factory;
-	m_pLogger = factory.retrieve<Logging::ILogger>();
+	m_pLogger = factory.retrieve<Logging::BaseLogger>();
 	m_pMotorCommandHandler = factory.retrieve<IMotorCommandHandler>();
 	m_pOutputGateway = factory.retrieve<IOutputGateway>();
 	m_pCurrentSensor = factory.retrieve<Sensors::CurrentSensor>();
@@ -111,7 +111,7 @@ void MessageHandler::processMessages()
 				else
 				{
 					// failure processing command
-					uint8_t payload = ACK_INVALID_PAYLOAD;
+					uint8_t payload = ACK_COMMAND_ERROR;
 					msg.setPayload(payload);
 
 					m_pLogger->logString(error, std::string("Unable to execute command"));

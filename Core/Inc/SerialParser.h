@@ -12,7 +12,7 @@
 #include "CommandInterface.h"
 #include "ITimebase.h"
 #include "IMessageHandler.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include <queue>
 #include <deque>
 #include <vector>
@@ -50,7 +50,7 @@ namespace MessageHandling
 		ParserState m_state{IDLE};
 		std::shared_ptr<ITimebase> m_pTimebase;
 		IMessageHandler* m_pMessageHandler{nullptr};
-		std::shared_ptr<Logging::ILogger> m_pLogger;
+		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 
 		uint32_t m_messageLength;
 		uint8_t* m_pMessage{nullptr};

@@ -17,7 +17,7 @@ namespace MotorControl
 		m_lastEncoderCount(m_pMotorDriver->getEncoderCounts())
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 		m_state = std::make_unique<MotorControlStates::Disabled>(m_pMotorDriver, m_pLogger);
 		std::memset(m_pMotorSpeedBuffer, 0, sizeof(float)*VELOCITY_BUFFER_SIZE);
 	}

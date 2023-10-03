@@ -1,31 +1,31 @@
 /*
- * MockLogger.cpp
+ * TestLogger.cpp
  *
  *  Created on: Jul 14, 2023
  *      Author: tim
  */
 
-#include "MockLogger.h"
+#include "TestLogger.h"
 #include <iostream>
 
 namespace Logging
 {
-    MockLogger::MockLogger()
+    TestLogger::TestLogger()
     { 
 
     }
     
-	void MockLogger::logString(LogLevel level, const std::string& msg)
+	void TestLogger::logString(LogLevel level, const std::string& msg)
 	{
 		std::cout << m_pTimebase->getTime_ms() << ": [" << logLevelString[level] << "] " << msg << "\n";
 	}
 	
-	bool MockLogger::logMessagesPending()
+	bool TestLogger::logMessagesPending()
 	{
 	    return false;
     }
     
-    bool MockLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+    bool TestLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
     {
         return true;
     }

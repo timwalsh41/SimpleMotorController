@@ -1,14 +1,14 @@
 /*
- * MockLogger.h
+ * TestLogger.h
  *
  *  Created on: Sep 6, 2023
  *      Author: tim
  */
 
-#ifndef INC_MOCKLOGGER_H_
+#ifndef INC_TESTLOGGER_H_
 #define INC_MOCKLOGGER_H_
 
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "ITimebase.h"
 #include <map>
 #include <string>
@@ -16,10 +16,10 @@
 
 namespace Logging
 {
-	class MockLogger : public ILogger
+	class TestLogger : public BaseLogger
 	{
 	public:
-		MockLogger();
+		TestLogger();
 
 		void logString(LogLevel level, const std::string& msg) override;
 		bool logMessagesPending() override;

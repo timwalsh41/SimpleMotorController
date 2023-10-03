@@ -18,7 +18,7 @@ namespace MessageHandling
 			m_pUartWrapper{pUartWrapper}
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 	}
 
 	OutputGateway::~OutputGateway()

@@ -1,5 +1,5 @@
 /*
- * Logger.h
+ * RealLogger.h
  *
  *  Created on: Jul 14, 2023
  *      Author: tim
@@ -8,7 +8,7 @@
 #ifndef SRC_LOGGER_H_
 #define SRC_LOGGER_H_
 
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "ITimebase.h"
 #include "IOutputGateway.h"
 #include <queue>
@@ -33,10 +33,10 @@ namespace Logging
 		std::string m_message{};
 	};
 
-	class Logger : public ILogger
+	class RealLogger : public BaseLogger
 	{
 	public:
-		Logger();
+		RealLogger();
 
 		void logString(LogLevel level, const std::string& msg) override;
 		bool logMessagesPending() override;

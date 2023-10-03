@@ -9,7 +9,7 @@
 #define SRC_CURRENTSENSOR_H_
 
 #include "Message.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "stdint.h"
 #include <memory>
 
@@ -76,7 +76,7 @@ namespace Sensors
 		// zero offset, in ADC counts
 		uint32_t m_zeroCurrentOffset{CURRENT_SENSOR_ZERO_OFFSET};
 
-		std::shared_ptr<Logging::ILogger> m_pLogger;
+		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 	};
 
 } /* namespace CurrentSensor */

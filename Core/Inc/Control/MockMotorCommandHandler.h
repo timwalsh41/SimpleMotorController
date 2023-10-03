@@ -13,6 +13,7 @@
 
 class MockMotorCommandHandler : public IMotorCommandHandler
 {
+public:
 	MOCK_METHOD(bool, enableMotor, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 	MOCK_METHOD(bool, disableMotor, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 	MOCK_METHOD(bool, sleepDriver, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));

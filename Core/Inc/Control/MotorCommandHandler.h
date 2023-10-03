@@ -11,7 +11,7 @@
 #include "IMotorCommandHandler.h"
 #include "Controller.h"
 #include "Message.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include <vector>
 #include <memory>
 
@@ -35,7 +35,7 @@ public:
 	bool getStatus(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 private:
 	std::shared_ptr<Controller> m_pController;
-	std::shared_ptr<Logging::ILogger> m_pLogger;
+	std::shared_ptr<Logging::BaseLogger> m_pLogger;
 };
 
 } /* namespace MotorControl */

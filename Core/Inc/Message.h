@@ -15,8 +15,8 @@
 
 namespace Logging
 {
-	// forward definition of ILogger class
-	class ILogger;
+	// forward definition of BaseLogger class
+	class BaseLogger;
 }
 
 namespace MessageHandling
@@ -64,7 +64,7 @@ namespace MessageHandling
 		uint8_t m_commandCode{0};
 		std::vector<uint8_t> m_payload;
 		uint16_t m_crc{0};
-		std::shared_ptr<Logging::ILogger> m_pLogger;
+		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 	};
 
 } /* namespace Message */

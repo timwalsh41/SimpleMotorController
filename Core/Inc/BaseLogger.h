@@ -1,12 +1,12 @@
 /*
- * ILogger.h
+ * BaseLogger.h
  *
  *  Created on: Sep 6, 2023
  *      Author: tim
  */
 
-#ifndef INC_ILOGGER_H_
-#define INC_ILOGGER_H_
+#ifndef INC_BASELOGGER_H_
+#define INC_BASELOGGER_H_
 
 #include "Message.h"
 #include "ITimebase.h"
@@ -26,16 +26,16 @@ enum LogLevel {
 namespace Logging
 {
 
-	class ILogger
+	class BaseLogger
 	{
 	public:
-		ILogger()
+		BaseLogger()
 		{
 			SingletonFactory factory;
 			m_pTimebase = factory.retrieve<ITimebase>();
 		}
 
-		virtual ~ILogger() {}
+		virtual ~BaseLogger() {}
 		virtual void logString(LogLevel level, const std::string& msg) = 0;
 		virtual bool logMessagesPending() = 0;
 		virtual bool retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
@@ -46,4 +46,4 @@ namespace Logging
 
 } // namespace Logging
 
-#endif /* INC_ILOGGER_H_ */
+#endif /* INC_BASELOGGER_H_ */

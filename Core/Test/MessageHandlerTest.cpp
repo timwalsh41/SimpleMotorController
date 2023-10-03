@@ -2,15 +2,17 @@
 #include <gtest/gtest.h>
 #include <TestTimebase.h>
 #include <SingletonFactory.h>
-#include <ILogger.h>
-#include <MockLogger.h>
+#include <TestLogger.h>
 #include <IMotorCommandHandler.h>
 #include <MockMotorCommandHandler.h>
 #include <MockOutputGateway.h>
 #include <MessageHandler.h>
+#include <CommandInterface.h>
 #include <Version.h>
 #include <iostream>
 #include <memory>
+
+using ::testing::Return;
 
 class MessageHandlerTest : public ::testing::Test
 {
@@ -18,9 +20,9 @@ class MessageHandlerTest : public ::testing::Test
         void SetUp() override
         {                  
             m_pTimebase = m_factory.create<ITimebase, TestTimebase>();
-            m_pLogger = m_factory.create<Logging::ILogger, Logging::MockLogger>();
+            m_pLogger = m_factory.create<Logging::BaseLogger, Logging::TestLogger>();
             m_pCurrentSensor = m_factory.create<Sensors::CurrentSensor>();
-            m_pMotorCommandHandler = m_factory.create<IMotorCommandHandler, MockMotorCommandHandler>();
+            m_pMotorCommandHandler = std::static_pointer_cast<MockMotorCommandHandler>(m_factory.create<IMotorCommandHandler, MockMotorCommandHandler>());
             m_pOutputGateway = std::static_pointer_cast<MockOutputGateway>(m_factory.create<IOutputGateway, MockOutputGateway>());
             
             m_pMessageHandler = std::make_unique<MessageHandling::MessageHandler>();
@@ -41,9 +43,9 @@ class MessageHandlerTest : public ::testing::Test
         SingletonFactory m_factory;
         std::shared_ptr<MockOutputGateway> m_pOutputGateway;
         std::shared_ptr<ITimebase> m_pTimebase;
-        std::shared_ptr<Logging::ILogger> m_pLogger;
+        std::shared_ptr<Logging::BaseLogger> m_pLogger;
         std::shared_ptr<Sensors::CurrentSensor> m_pCurrentSensor;
-        std::shared_ptr<IMotorCommandHandler> m_pMotorCommandHandler;
+        std::shared_ptr<MockMotorCommandHandler> m_pMotorCommandHandler;
         std::unique_ptr<MessageHandling::MessageHandler> m_pMessageHandler;
 };
 
@@ -78,8 +80,120 @@ TEST_F(MessageHandlerTest, InvalidCrcMessage) {
     m_pMessageHandler->loadIncomingMessage(msg);    
     m_pMessageHandler->processMessages();
     
-    auto retCode = m_pOutputGateway->processMessage();
-    std::cout << "Output code: " << retCode << "\n";
+    EXPECT_EQ(m_pOutputGateway->processMessage(), ACK_INVALID_CRC);
+    
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // EXPECT_TRUE(::testing::Mock::VerifyAndClearExpectations(m_pOutputGateway.get()));
+    
+    // ASSERT_TRUE(false);
+}
+
+TEST_F(MessageHandlerTest, InvalidCommandCodeMessage) {
+    MessageHandling::Message msg;    
+    
+    // m_pOutputGateway is a shared pointer to IOutputGateway, we need to cast to MockOutputGateway to use some of
+    // the fake functionality
+    // std::cout << "Casting output gateway pointer to MockOutputGateway\n";
+    // std::shared_ptr<MockOutputGateway> pOutputGateway = std::static_pointer_cast<MockOutputGateway>(m_pOutputGateway);
+    
+    // Because our mock output gateway is held outside of this function, it will leak (e.g. persist) after the
+    // test function is complete. For that reason, we will allow it to leak, and manually call VerifyAndClearExpectations
+    // below to confirm that expectations/calls are met.
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // ::testing::Mock::AllowLeak(m_pOutputGateway.get());
+    
+    m_pOutputGateway->DelegateToFake();
+
+    // pick an invalid command code and then set CRC
+    msg.setCommandCode(0x00);
+    msg.setCRC();
+    
+    // now load and process the message
+    EXPECT_CALL(*m_pOutputGateway, sendMessage).Times(1);
+    EXPECT_CALL(*m_pOutputGateway, processMessage()).Times(1);
+    
+    m_pMessageHandler->loadIncomingMessage(msg);    
+    m_pMessageHandler->processMessages();
+    
+    EXPECT_EQ(m_pOutputGateway->processMessage(), ACK_INVALID_COMMAND);
+    
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // EXPECT_TRUE(::testing::Mock::VerifyAndClearExpectations(m_pOutputGateway.get()));
+    
+    // ASSERT_TRUE(false);
+}
+
+TEST_F(MessageHandlerTest, CommandExecutionFailure) {
+    MessageHandling::Message msg;    
+    
+    // m_pOutputGateway is a shared pointer to IOutputGateway, we need to cast to MockOutputGateway to use some of
+    // the fake functionality
+    // std::cout << "Casting output gateway pointer to MockOutputGateway\n";
+    // std::shared_ptr<MockOutputGateway> pOutputGateway = std::static_pointer_cast<MockOutputGateway>(m_pOutputGateway);
+    
+    // Because our mock output gateway is held outside of this function, it will leak (e.g. persist) after the
+    // test function is complete. For that reason, we will allow it to leak, and manually call VerifyAndClearExpectations
+    // below to confirm that expectations/calls are met.
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // ::testing::Mock::AllowLeak(m_pOutputGateway.get());
+    
+    m_pOutputGateway->DelegateToFake();
+
+    // pick an invalid command code and then set CRC
+    msg.setCommandCode(CMD_ENABLE_MOTOR);
+    msg.setCRC();
+    
+    // now load and process the message
+    EXPECT_CALL(*m_pOutputGateway, sendMessage).Times(1);
+    EXPECT_CALL(*m_pOutputGateway, processMessage()).Times(1);
+    EXPECT_CALL(*m_pMotorCommandHandler, enableMotor).Times(1).WillOnce(Return(false));
+    
+    m_pMessageHandler->loadIncomingMessage(msg);    
+    m_pMessageHandler->processMessages();
+    
+    EXPECT_EQ(m_pOutputGateway->processMessage(), ACK_COMMAND_ERROR);
+    
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // EXPECT_TRUE(::testing::Mock::VerifyAndClearExpectations(m_pOutputGateway.get()));
+    
+    // ASSERT_TRUE(false);
+}
+
+TEST_F(MessageHandlerTest, CommandExecutionSucccess) {
+    MessageHandling::Message msg;    
+    
+    // m_pOutputGateway is a shared pointer to IOutputGateway, we need to cast to MockOutputGateway to use some of
+    // the fake functionality
+    // std::cout << "Casting output gateway pointer to MockOutputGateway\n";
+    // std::shared_ptr<MockOutputGateway> pOutputGateway = std::static_pointer_cast<MockOutputGateway>(m_pOutputGateway);
+    
+    // Because our mock output gateway is held outside of this function, it will leak (e.g. persist) after the
+    // test function is complete. For that reason, we will allow it to leak, and manually call VerifyAndClearExpectations
+    // below to confirm that expectations/calls are met.
+    // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
+    // (leaving this comments for posterity)
+    // ::testing::Mock::AllowLeak(m_pOutputGateway.get());
+    
+    m_pOutputGateway->DelegateToFake();
+
+    // pick an invalid command code and then set CRC
+    msg.setCommandCode(CMD_ENABLE_MOTOR);
+    msg.setCRC();
+    
+    // now load and process the message
+    EXPECT_CALL(*m_pOutputGateway, sendMessage).Times(1);
+    EXPECT_CALL(*m_pOutputGateway, processMessage()).Times(1);
+    EXPECT_CALL(*m_pMotorCommandHandler, enableMotor).Times(1).WillOnce(Return(true));
+    
+    m_pMessageHandler->loadIncomingMessage(msg);    
+    m_pMessageHandler->processMessages();
+    
+    EXPECT_EQ(m_pOutputGateway->processMessage(), ACK_SUCCESSFUL);
     
     // NOTE - THIS IS ACTUALLY NOT NEEDED ONCE WE CLEAR THE SINGLETON MAP IN THE TEARDOWN FUNCTION
     // (leaving this comments for posterity)
@@ -94,13 +208,13 @@ TEST_F(MessageHandlerTest, InvalidCrcMessage) {
 
 /*
 [x] Build a mock/fake output gateway - we want to inspect the outgoing message
-[ ] Rename logging classes (ILogger becomes BaseLogger, Logger becomes RealLogger, MockLogger
+[x] Rename logging classes (ILogger becomes BaseLogger, Logger becomes RealLogger, MockLogger
     becomes TestLogger)
 
 Tests:
-[ ] Invalid CRC message
-[ ] Invalid command code message
-[ ] Unable to execute command - need fake command handler
+[x] Invalid CRC message
+[x] Invalid command code message
+[x] Unable to execute command - need fake command handler
 [ ] Successful command execution
 
 */

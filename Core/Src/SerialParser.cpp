@@ -36,7 +36,7 @@ namespace MessageHandling
 			m_pMessageHandler(pMessageHandler)
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 		m_pTimebase = factory.retrieve<ITimebase>();
 
 		if (m_pTimebase.get() == nullptr)

@@ -28,8 +28,8 @@ constexpr uint8_t ACK_INVALID_CRC = 0x28;	// '('
 // Response code for invalid command code
 constexpr uint8_t ACK_INVALID_COMMAND = 0x29; 	// ')'
 
-// Response code for invalid payload
-constexpr uint8_t ACK_INVALID_PAYLOAD = 0x2A; 	// '*'
+// Response code for command processing error
+constexpr uint8_t ACK_COMMAND_ERROR = 0x2A; 	// '*'
 
 // Commands
 constexpr uint8_t CMD_ENABLE_MOTOR = 0x30;		// '0'

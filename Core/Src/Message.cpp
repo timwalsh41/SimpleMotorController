@@ -7,7 +7,7 @@
 
 
 #include "Message.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "SingletonFactory.h"
 #include <cstring>
 #include <memory>
@@ -20,7 +20,7 @@ namespace MessageHandling
 	Message::Message()
 	{
 		SingletonFactory factory;
-		m_pLogger = factory.retrieve<Logging::ILogger>();
+		m_pLogger = factory.retrieve<Logging::BaseLogger>();
 	}
 
 	Message::Message(const Message& other) :

@@ -2,7 +2,7 @@
 #include <Message.h>
 #include <CurrentSensor.h>
 #include <TestTimebase.h>
-#include <MockLogger.h>
+#include <TestLogger.h>
 #include <SingletonFactory.h>
 #include <stdint.h>
 #include <iostream>
@@ -23,7 +23,7 @@ class CurrentSensorTest : public ::testing::Test
         {
             SingletonFactory factory;
             std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
-            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+            std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, Logging::TestLogger>();
             m_pSensor = std::make_unique<Sensors::CurrentSensor>();
         }
         

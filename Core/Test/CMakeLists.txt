@@ -5,7 +5,7 @@ include(GoogleTest)
 add_executable(
   MessageTest
   MessageTest.cpp
-  MockLogger.cpp
+  TestLogger.cpp
   ../Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
@@ -26,7 +26,7 @@ gtest_discover_tests(MessageTest)
 add_executable(
   CurrentSensorTest
   CurrentSensorTest.cpp
-  MockLogger.cpp
+  TestLogger.cpp
   ../Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
@@ -49,7 +49,7 @@ gtest_discover_tests(CurrentSensorTest)
 add_executable(
   SerialParserTest
   SerialParserTest.cpp
-  MockLogger.cpp
+  TestLogger.cpp
   ../Src/SingletonFactory.cpp
   ../Src/TestTimebase.cpp
   ../Src/Message.cpp
@@ -79,7 +79,7 @@ gtest_discover_tests(SerialParserTest)
 add_executable(
   ControllerTest
   ControllerTest.cpp
-  MockLogger.cpp
+  TestLogger.cpp
   ../Src/SingletonFactory.cpp
   ../Src/TestTimebase.cpp
   ../Src/Control/Controller.cpp
@@ -106,7 +106,7 @@ gtest_discover_tests(ControllerTest)
 add_executable(
   MessageHandlerTest
   MessageHandlerTest.cpp
-  MockLogger.cpp
+  TestLogger.cpp
   ../Src/SingletonFactory.cpp
   ../Src/TestTimebase.cpp
   ../Src/MessageHandler.cpp

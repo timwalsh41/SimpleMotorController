@@ -2,8 +2,7 @@
 #include <gtest/gtest.h>
 #include <TestTimebase.h>
 #include <SingletonFactory.h>
-#include <ILogger.h>
-#include <MockLogger.h>
+#include <TestLogger.h>
 #include <Control/IMotorDriver.h>
 #include <Control/MockMotorDriver.h>
 #include <Control/Controller.h>
@@ -27,7 +26,7 @@ class ControllerTest : public ::testing::Test
         {
             SingletonFactory factory;
             std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
-            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+            std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, Logging::TestLogger>();
             
             m_pController = std::make_unique<MotorControl::Controller>(static_cast<IMotorDriver*>(&m_motorDriver));
         }

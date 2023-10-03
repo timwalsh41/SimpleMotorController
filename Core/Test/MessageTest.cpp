@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <Message.h>
 #include <SingletonFactory.h>
-#include <ILogger.h>
-#include <MockLogger.h>
+#include <BaseLogger.h>
+#include <TestLogger.h>
 #include <TestTimebase.h>
 #include <stdint.h>
 #include <vector>
@@ -17,7 +17,7 @@ class MessageTest : public ::testing::Test
         {
             SingletonFactory factory;            
             std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
-            std::shared_ptr<Logging::ILogger> pLogger = factory.create<Logging::ILogger, Logging::MockLogger>();
+            std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, Logging::TestLogger>();
         }
         
         // Calculate CRC16 for the input byte array, set the two byte response

@@ -10,7 +10,6 @@
 
 #include "stm32l4xx_hal.h"
 #include <IUartWrapper.h>
-#include <ILogger.h>
 #include <SerialParser.h>
 #include <memory>
 

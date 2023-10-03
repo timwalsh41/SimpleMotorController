@@ -18,7 +18,7 @@
 #define SRC_CONTROL_MOTORCONTROLSTATE_H_
 
 #include "IMotorDriver.h"
-#include "ILogger.h"
+#include "BaseLogger.h"
 #include "ITimebase.h"
 #include <string>
 #include <memory>
@@ -70,7 +70,7 @@ namespace MotorControl
 
 	class MotorControlState {
 	public:
-		MotorControlState(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+		MotorControlState(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 		virtual ~MotorControlState();
 
 		virtual std::unique_ptr<MotorControlState> handleEvent(MotorEvent) = 0;
@@ -84,7 +84,7 @@ namespace MotorControl
 
 	protected:
 		IMotorDriver* m_pMotorDriver;
-		std::shared_ptr<Logging::ILogger> m_pLogger;
+		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 		MotorStateIdCode m_stateId{UNSET};
 		uint32_t m_stateEntryTime{0};
 		std::shared_ptr<ITimebase> m_pTimebase;
@@ -95,35 +95,35 @@ namespace MotorControl
 		class Disabled : public MotorControlState
 		{
 		public:
-			Disabled(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+			Disabled(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Idle : public MotorControlState
 		{
 		public:
-			Idle(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+			Idle(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Fault : public MotorControlState
 		{
 		public:
-			Fault(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+			Fault(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Sleeping : public MotorControlState
 		{
 		public:
-			Sleeping(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+			Sleeping(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 
 		class Ramp : public MotorControlState
 		{
 		public:
-			Ramp(IMotorDriver*, std::shared_ptr<Logging::ILogger>&, std::unique_ptr<MotorCommand>&);
+			Ramp(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&, std::unique_ptr<MotorCommand>&);
 			~Ramp();
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		private:
@@ -137,7 +137,7 @@ namespace MotorControl
 		class Running : public MotorControlState
 		{
 		public:
-			Running(IMotorDriver*, std::shared_ptr<Logging::ILogger>&);
+			Running(IMotorDriver*, std::shared_ptr<Logging::BaseLogger>&);
 			std::unique_ptr<MotorControlState> handleEvent(MotorEvent) override;
 		};
 	} // namespace MotorControlStates
