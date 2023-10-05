@@ -42,7 +42,7 @@ namespace Logging
 		bool logMessagesPending() override;
 		bool retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	private:
-		std::shared_ptr<IOutputGateway> m_pOutputGateway;
+		std::shared_ptr<MessageHandling::IOutputGateway> m_pOutputGateway;
 		std::queue<LogMessage> m_logMessageQueue{};
 		uint32_t m_logLength_char{0};
 	};

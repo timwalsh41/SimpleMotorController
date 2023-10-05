@@ -4,9 +4,9 @@ include(GoogleTest)
 
 add_executable(
   MessageTest
-  MessageTest.cpp
-  TestLogger.cpp
-  ../Src/TestTimebase.cpp
+  ./Src/MessageTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
 )
@@ -15,7 +15,7 @@ target_link_libraries(
   GTest::gtest_main
 )
 
-target_include_directories(MessageTest PUBLIC ../Inc/ ../Inc/Control)
+target_include_directories(MessageTest PUBLIC ./Inc/ ../Inc/ ../Inc/Control/)
 
 gtest_discover_tests(MessageTest)
 
@@ -25,9 +25,9 @@ gtest_discover_tests(MessageTest)
 
 add_executable(
   CurrentSensorTest
-  CurrentSensorTest.cpp
-  TestLogger.cpp
-  ../Src/TestTimebase.cpp
+  ./Src/CurrentSensorTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
   ../Src/Message.cpp
   ../Src/CurrentSensor.cpp
@@ -38,7 +38,7 @@ target_link_libraries(
   GTest::gtest_main
 )
 
-target_include_directories(CurrentSensorTest PUBLIC ../Inc/ ../Inc/Control)
+target_include_directories(CurrentSensorTest PUBLIC ./Inc/ ../Inc/ ../Inc/Control/)
 
 gtest_discover_tests(CurrentSensorTest)
 
@@ -48,10 +48,10 @@ gtest_discover_tests(CurrentSensorTest)
 
 add_executable(
   SerialParserTest
-  SerialParserTest.cpp
-  TestLogger.cpp
+  ./Src/SerialParserTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
-  ../Src/TestTimebase.cpp
   ../Src/Message.cpp
   ../Src/SerialParser.cpp
 )
@@ -62,13 +62,10 @@ target_link_libraries(
   GTest::gmock_main
 )
 
-target_include_directories(SerialParserTest PUBLIC 
+target_include_directories(SerialParserTest PUBLIC
+    ./Inc/
     ../Inc/ 
-    ../Inc/Control 
-    ../../Drivers/STM32L4xx_HAL_Driver/Inc 
-    ../../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy
-    ../../Drivers/CMSIS/Device/ST/STM32L4xx/Include
-    ../../Drivers/CMSIS/Include
+    ../Inc/Control/
     )
 
 gtest_discover_tests(SerialParserTest)
@@ -78,10 +75,10 @@ gtest_discover_tests(SerialParserTest)
 
 add_executable(
   ControllerTest
-  ControllerTest.cpp
-  TestLogger.cpp
+  ./Src/ControllerTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
-  ../Src/TestTimebase.cpp
   ../Src/Control/Controller.cpp
   ../Src/Control/MotorControlState.cpp
   ../Src/Utility.cpp
@@ -93,9 +90,10 @@ target_link_libraries(
   GTest::gmock_main
 )
 
-target_include_directories(ControllerTest PUBLIC 
+target_include_directories(ControllerTest PUBLIC
+    ./Inc/
     ../Inc/ 
-    ../Inc/Control 
+    ../Inc/Control/
     )
 
 gtest_discover_tests(ControllerTest)
@@ -105,10 +103,10 @@ gtest_discover_tests(ControllerTest)
 
 add_executable(
   MessageHandlerTest
-  MessageHandlerTest.cpp
-  TestLogger.cpp
+  ./Src/MessageHandlerTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
   ../Src/SingletonFactory.cpp
-  ../Src/TestTimebase.cpp
   ../Src/MessageHandler.cpp
   ../Src/Message.cpp
   ../Src/CurrentSensor.cpp
@@ -121,9 +119,38 @@ target_link_libraries(
   GTest::gmock_main
 )
 
-target_include_directories(MessageHandlerTest PUBLIC 
+target_include_directories(MessageHandlerTest PUBLIC
+    ./Inc/
     ../Inc/ 
-    ../Inc/Control 
+    ../Inc/Control/
     )
 
 gtest_discover_tests(MessageHandlerTest)
+
+
+#******** OUTPUTGATEWAY TEST *******************
+
+add_executable(
+  OutputGatewayTest
+  ./Src/OutputGatewayTest.cpp
+  ./Src/TestLogger.cpp
+  ./Src/TestTimebase.cpp
+  ../Src/OutputGateway.cpp
+  ../Src/Utility.cpp
+  ../Src/SingletonFactory.cpp
+  ../Src/Message.cpp
+)
+
+target_link_libraries(
+  OutputGatewayTest
+  GTest::gtest_main
+  GTest::gmock_main
+)
+
+target_include_directories(OutputGatewayTest PUBLIC
+    ./Inc/
+    ../Inc/ 
+    ../Inc/Control/
+    )
+
+gtest_discover_tests(OutputGatewayTest)

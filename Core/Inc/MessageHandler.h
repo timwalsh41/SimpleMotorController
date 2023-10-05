@@ -36,7 +36,7 @@ namespace MessageHandling
 		void buildCommandMap();
 
 		std::shared_ptr<Logging::BaseLogger> m_pLogger;
-		std::shared_ptr<IMotorCommandHandler> m_pMotorCommandHandler;
+		std::shared_ptr<MotorControl::IMotorCommandHandler> m_pMotorCommandHandler;
 		std::shared_ptr<IOutputGateway> m_pOutputGateway;
 		std::shared_ptr<Sensors::CurrentSensor> m_pCurrentSensor;
 

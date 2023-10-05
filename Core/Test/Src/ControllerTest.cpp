@@ -3,10 +3,10 @@
 #include <TestTimebase.h>
 #include <SingletonFactory.h>
 #include <TestLogger.h>
-#include <Control/IMotorDriver.h>
-#include <Control/MockMotorDriver.h>
-#include <Control/Controller.h>
-#include <Control/MotorControlState.h>
+#include <IMotorDriver.h>
+#include <MockMotorDriver.h>
+#include <Controller.h>
+#include <MotorControlState.h>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -28,7 +28,7 @@ class ControllerTest : public ::testing::Test
             std::shared_ptr<ITimebase> pTimebase = factory.create<ITimebase, TestTimebase>();
             std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, Logging::TestLogger>();
             
-            m_pController = std::make_unique<MotorControl::Controller>(static_cast<IMotorDriver*>(&m_motorDriver));
+            m_pController = std::make_unique<MotorControl::Controller>(static_cast<MotorControl::IMotorDriver*>(&m_motorDriver));
         }
         
         // ramp the motor to a new setpoint, track the ramp progress, and verify final PWM and state
@@ -223,7 +223,7 @@ class ControllerTest : public ::testing::Test
                 EXPECT_EQ(m_pController->getState(), MotorControl::RUNNING);
         }
         
-        NiceMock<MockMotorDriver> m_motorDriver{};
+        NiceMock<MotorControl::MockMotorDriver> m_motorDriver{};
         std::unique_ptr<MotorControl::Controller> m_pController{};
 };
 

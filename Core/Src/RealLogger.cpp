@@ -14,7 +14,7 @@ namespace Logging
 	RealLogger::RealLogger()
 	{
 		SingletonFactory factory;
-		m_pOutputGateway = factory.retrieve<IOutputGateway>();
+		m_pOutputGateway = factory.retrieve<MessageHandling::IOutputGateway>();
 	}
 
 	void RealLogger::logString(LogLevel level, const std::string& msg)

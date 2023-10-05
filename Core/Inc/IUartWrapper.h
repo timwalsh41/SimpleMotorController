@@ -17,8 +17,6 @@ class IUartWrapper
 public:
 	virtual ~IUartWrapper() {}
 	virtual void transmitString(const std::string&) const = 0;
-	virtual void registerUserTxCallback(const std::function<void()>) = 0;
-	virtual void registerUserRxCallback(const std::function<void()>) = 0;
 };
 
 #endif /* INC_IUARTWRAPPER_H_ */

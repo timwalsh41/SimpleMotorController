@@ -22,8 +22,8 @@ class MessageHandlerTest : public ::testing::Test
             m_pTimebase = m_factory.create<ITimebase, TestTimebase>();
             m_pLogger = m_factory.create<Logging::BaseLogger, Logging::TestLogger>();
             m_pCurrentSensor = m_factory.create<Sensors::CurrentSensor>();
-            m_pMotorCommandHandler = std::static_pointer_cast<MockMotorCommandHandler>(m_factory.create<IMotorCommandHandler, MockMotorCommandHandler>());
-            m_pOutputGateway = std::static_pointer_cast<MockOutputGateway>(m_factory.create<IOutputGateway, MockOutputGateway>());
+            m_pMotorCommandHandler = std::static_pointer_cast<MotorControl::MockMotorCommandHandler>(m_factory.create<MotorControl::IMotorCommandHandler, MotorControl::MockMotorCommandHandler>());
+            m_pOutputGateway = std::static_pointer_cast<MessageHandling::MockOutputGateway>(m_factory.create<MessageHandling::IOutputGateway, MessageHandling::MockOutputGateway>());
             
             m_pMessageHandler = std::make_unique<MessageHandling::MessageHandler>();
             
@@ -41,11 +41,11 @@ class MessageHandlerTest : public ::testing::Test
         }
         
         SingletonFactory m_factory;
-        std::shared_ptr<MockOutputGateway> m_pOutputGateway;
+        std::shared_ptr<MessageHandling::MockOutputGateway> m_pOutputGateway;
         std::shared_ptr<ITimebase> m_pTimebase;
         std::shared_ptr<Logging::BaseLogger> m_pLogger;
         std::shared_ptr<Sensors::CurrentSensor> m_pCurrentSensor;
-        std::shared_ptr<MockMotorCommandHandler> m_pMotorCommandHandler;
+        std::shared_ptr<MotorControl::MockMotorCommandHandler> m_pMotorCommandHandler;
         std::unique_ptr<MessageHandling::MessageHandler> m_pMessageHandler;
 };
 
@@ -164,7 +164,7 @@ TEST_F(MessageHandlerTest, CommandExecutionFailure) {
     // ASSERT_TRUE(false);
 }
 
-TEST_F(MessageHandlerTest, CommandExecutionSucccess) {
+TEST_F(MessageHandlerTest, CommandExecutionSuccess) {
     MessageHandling::Message msg;    
     
     // m_pOutputGateway is a shared pointer to IOutputGateway, we need to cast to MockOutputGateway to use some of
@@ -202,10 +202,6 @@ TEST_F(MessageHandlerTest, CommandExecutionSucccess) {
     // ASSERT_TRUE(false);
 }
 
-// TODO:
-// - Troubleshoot issues with mock output gateway
-// - Remove all the <iostream> & cout from the production code
-
 /*
 [x] Build a mock/fake output gateway - we want to inspect the outgoing message
 [x] Rename logging classes (ILogger becomes BaseLogger, Logger becomes RealLogger, MockLogger
@@ -215,6 +211,6 @@ Tests:
 [x] Invalid CRC message
 [x] Invalid command code message
 [x] Unable to execute command - need fake command handler
-[ ] Successful command execution
+[x] Successful command execution
 
 */

@@ -10,18 +10,20 @@
 
 #include "Message.h"
 #include <string>
-#include <iostream>
+
+namespace MessageHandling
+{
 
 class IOutputGateway
 {
 public:
-	virtual ~IOutputGateway() {std::cout << "IOutputGateway destructor\n";}
+	virtual ~IOutputGateway() {}
 
 	virtual void addLogString(std::string& msg) = 0;
 	virtual void sendMessage(MessageHandling::Message& msg) = 0;
 	virtual void processOutgoingMessages() = 0;
 };
 
-
+} /* namespace MessageHandling */
 
 #endif /* INC_IOUTPUTGATEWAY_H_ */

@@ -11,6 +11,9 @@
 #include <IMotorDriver.h>
 #include <gmock/gmock.h>
 
+namespace MotorControl
+{
+
 class FakeMotorDriver
 {
 public:
@@ -72,6 +75,8 @@ public:
 private:
 	FakeMotorDriver fake_;
 };
+
+} /* namespace MotorControl */
 
 
 #endif /* INC_CONTROL_MOCKMOTORDRIVER_H_ */

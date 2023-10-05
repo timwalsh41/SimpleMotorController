@@ -11,6 +11,8 @@
 #include "CommandInterface.h"
 #include <cstring>
 
+#include <iostream>
+
 namespace MessageHandling
 {
 
@@ -26,7 +28,6 @@ namespace MessageHandling
 
 	}
 
-	// TODO: need to handle log messages with a full output message if running in release mode
 	void OutputGateway::addLogString(std::string& msg)
 	{
 		m_logStringQueue.push(std::move(msg));
@@ -41,7 +42,6 @@ namespace MessageHandling
 	{
 		setTransmitting();
 		m_pUartWrapper->transmitString(outString);
-		// HAL_UART_Transmit_IT(&huart2, (const uint8_t*) outString.c_str(), outString.length());
 
 		// adding a bit of delay here seems to keep the transmitted array from being corrupted
 		Utility::delayCycles(250);
@@ -53,7 +53,6 @@ namespace MessageHandling
 
 		if (messageToStringWithStartStop(fullMessage, msg))
 		{
-			// TODO: for debug mode, transmit a text version of the message
 			transmitString(fullMessage);
 		}
 		else
@@ -62,22 +61,29 @@ namespace MessageHandling
 
 	void OutputGateway::processOutgoingMessages()
 	{
+		std::cout << "Processing\n";
 		if (!m_receiving)
 			// nothing to do while we're in the middle of a transmission
 			return;
+
+		std::cout << "Past receiving check\n";
 
 		// send one message or log entry, if any exist, we only send one per call
 		// to allow for transmission
 		if (!m_messageQueue.empty())
 		{
+			std::cout << "Sending message\n";
 			transmitMessage(m_messageQueue.front());
 			m_messageQueue.pop();
 		}
 		else if (!m_logStringQueue.empty())
 		{
+			std::cout << "Sending string: " << m_logStringQueue.front() << "\n";
 			transmitString(m_logStringQueue.front());
 			m_logStringQueue.pop();
 		}
+
+		std::cout << "Done processing\n";
 	}
 
 	bool OutputGateway::messageToStringWithStartStop(std::string& outputString, const Message& inputMessage) const

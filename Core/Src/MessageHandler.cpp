@@ -10,7 +10,6 @@
 #include "Version.h"
 #include "SingletonFactory.h"
 #include "IOutputGateway.h"
-#include <iostream>
 
 namespace MessageHandling
 {
@@ -19,18 +18,13 @@ MessageHandler::MessageHandler()
 {
 	SingletonFactory factory;
 	m_pLogger = factory.retrieve<Logging::BaseLogger>();
-	m_pMotorCommandHandler = factory.retrieve<IMotorCommandHandler>();
+	m_pMotorCommandHandler = factory.retrieve<MotorControl::IMotorCommandHandler>();
 	m_pOutputGateway = factory.retrieve<IOutputGateway>();
 	m_pCurrentSensor = factory.retrieve<Sensors::CurrentSensor>();
 
 	if (m_pMotorCommandHandler.get() == nullptr || m_pOutputGateway.get() == nullptr ||
 			m_pCurrentSensor.get() == nullptr)
 	{
-		std::cout << "Command handler: " << m_pMotorCommandHandler.get() << "\n";
-		std::cout << "Output gateway: " << m_pOutputGateway.get() << "\n";
-		std::cout << "Current sensor: " << m_pCurrentSensor.get() << "\n";
-		std::cout << "Logger: " << m_pLogger.get() << "\n";
-
 		m_pLogger->logString(fatal, "Unable to retrieve singleton objects required for operation");
 	}
 
@@ -45,12 +39,6 @@ MessageHandler::~MessageHandler()
 void MessageHandler::loadIncomingMessage(Message& msg)
 {
 	m_messageQueue.push(std::move(msg));
-
-	std::cout << "Loaded message!\n";
-	std::cout << "\tCommand code: " << m_messageQueue.front().getCommandCode() << "\n";
-	std::cout << "\tPayload length: " << m_messageQueue.front().getPayload().size() << "\n";
-	std::cout << "\tCRC: " << m_messageQueue.front().getCRC() << "\n";
-
 }
 
 void MessageHandler::processMessages()
@@ -63,11 +51,6 @@ void MessageHandler::processMessages()
 		// when we can release it
 		msg = std::move(m_messageQueue.front());
 		m_messageQueue.pop();
-
-		std::cout << "Processing message!\n";
-		std::cout << "\tCommand code: " << msg.getCommandCode() << "\n";
-		std::cout << "\tPayload length: " << msg.getPayload().size() << "\n";
-		std::cout << "\tCRC: " << msg.getCRC() << "\n";
 
 		if (!msg.checkCRC())
 		{
@@ -122,8 +105,6 @@ void MessageHandler::processMessages()
 		// msg has the original command code, we just need to set the ack bit and calculate the CRC
 		msg.setAck();
 		msg.setCRC();
-
-		std::cout << "Sending message to output gateway\n";
 
 		m_pOutputGateway->sendMessage(msg);
 	}

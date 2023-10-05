@@ -8,11 +8,12 @@
 #ifndef INC_MOCKOUTPUTGATEWAY_H_
 #define INC_MOCKOUTPUTGATEWAY_H_
 
-
 #include <IOutputGateway.h>
 #include <gmock/gmock.h>
 #include <iostream>
 
+namespace MessageHandling
+{
 class FakeOutputGateway
 {
 public:
@@ -33,8 +34,6 @@ public:
 private:
 	MessageHandling::Message m_msg;
 };
-
-
 
 class MockOutputGateway : public IOutputGateway
 {
@@ -57,5 +56,6 @@ private:
 	FakeOutputGateway fake_;
 };
 
+} /* namespace MessageHandling */
 
 #endif /* INC_MOCKOUTPUTGATEWAY_H_ */

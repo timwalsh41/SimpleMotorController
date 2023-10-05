@@ -46,10 +46,13 @@
 
 using MessageHandling::MessageHandler;
 using MessageHandling::SerialParser;
+using MessageHandling::IOutputGateway;
 using MessageHandling::OutputGateway;
 using Sensors::CurrentSensor;
 using MotorControl::Controller;
+using MotorControl::IMotorCommandHandler;
 using MotorControl::MotorCommandHandler;
+using MotorControl::IMotorDriver;
 using MotorControl::PololuG2MotorDriver;
 using Logging::RealLogger;
 
@@ -182,7 +185,7 @@ int main(void)
 		  	  	  	  	  	  std::to_string(version[0]) + "." + \
 							  std::to_string(version[1]) + "." + \
 							  std::to_string(version[2]);
-  pOutputGateway->addLogString(welcomeString);
+  pLogger->logString(info, welcomeString);
 #endif
 
 
