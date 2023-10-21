@@ -3,4 +3,7 @@ Release/
 build/
 Core/Test/MockMemoryLeak/
 .vscode/
+*.log
+Script/__pycache__
 2023-09 To do tracking
+
