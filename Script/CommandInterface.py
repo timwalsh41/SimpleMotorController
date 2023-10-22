@@ -44,8 +44,21 @@ CMD_GET_VERSION = 0x70;		# 'p'
 CMD_GET_STATUS = 0x71;		# 'q'
 CMD_GET_LOG_MESSAGE = 0x72;	# 'r'
 
+# These commands do not return a payload with data, we group
+# them here for standardized processing
+NO_RESPONSE_PAYLOAD_COMMANDS = [CMD_ENABLE_MOTOR,
+                                CMD_DISABLE_MOTOR,
+                                CMD_SLEEP_DRIVER,
+                                CMD_WAKE_DRIVER,
+                                CMD_CLEAR_FAULT,
+                                CMD_RAMP_MOTOR_ON,
+                                CMD_RAMP_MOTOR_OFF,
+                                CMD_SET_MAX_DC,
+                                CMD_INJECT_FAULT
+                                ]
+
 LOG_SEVERITY_MAP = {0: 'DEBUG',
                     1: 'INFO',
-                    2: 'WARNING'
+                    2: 'WARNING',
                     3: 'ERROR',
                     4: 'FATAL'}
