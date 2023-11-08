@@ -6,6 +6,8 @@ import logging
 class MotorDriver:
     def __init__(self, port = None):
         self._logger = logging.getLogger(__name__)
+        self._port = None
+
         if port is not None:
             self.setPort(port)
         else:
@@ -15,8 +17,8 @@ class MotorDriver:
 
 
     def setPort(self, port):
-        if os.path.isfile(port):
-            self._port == port
+        if os.path.exists(port):
+            self._port = port
             self._logger.info(f'Set port to {port}')
         else:
             self._port = None
@@ -67,8 +69,8 @@ class MotorDriver:
         # check bytes available to read, waiting for it to stabilize in case
         # we are in the middle of a transmission
         bytesAvailable = -1
-        while (bytesAvailable != self._serial.in_waiting()):
-            bytesAvailable = self._serial.in_waiting()
+        while bytesAvailable != self._serial.in_waiting:
+            bytesAvailable = self._serial.in_waiting
             time.sleep(0.05)
 
         if bytesAvailable == 0:

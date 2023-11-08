@@ -129,8 +129,13 @@ int main(void)
   // create the logging singleton as that is accessed by all other objects
   std::shared_ptr<Logging::BaseLogger> pLogger = factory.create<Logging::BaseLogger, RealLogger>();
 
-  // Output gateway, current sensor, and controller only requires the logger
+  // Output gateway only requires the logger, and then we need to load the gateway into the logger
+  // (because there is a circular dependency here, we create the logger, then the gateway, then register
+  // the gateway with the logger)
   std::shared_ptr<IOutputGateway> pOutputGateway = factory.create<IOutputGateway, OutputGateway>(static_cast<IUartWrapper*>(&uartWrapper));
+  std::static_pointer_cast<RealLogger>(pLogger)->loadOutputGateway();
+
+  // Current sensor and controller also only require the logger
   std::shared_ptr<CurrentSensor> pCurrentSensor = factory.create<CurrentSensor>();
   std::shared_ptr<Controller> pController = factory.create<Controller>(static_cast<IMotorDriver*>(&theMotorDriver));
 
@@ -725,10 +730,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	SingletonFactory factory;
-	auto pOutputGateway = factory.retrieve<OutputGateway>();
+	auto pOutputGateway = factory.retrieve<IOutputGateway>();
 
 	HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
-	pOutputGateway->setReceiving();
+	std::static_pointer_cast<OutputGateway>(pOutputGateway)->setReceiving();
 }
 
 // Called when ADC DMA buffer is completely filled

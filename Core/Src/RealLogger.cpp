@@ -13,6 +13,13 @@ namespace Logging
 {
 	RealLogger::RealLogger()
 	{
+
+	}
+
+	void RealLogger::loadOutputGateway()
+	{
+		// we have a circular dependency between the logger and the output gateway, to solve this we create the logger first,
+		// then create the gateway, then load up the logger's pointer to the gateway singleton here
 		SingletonFactory factory;
 		m_pOutputGateway = factory.retrieve<MessageHandling::IOutputGateway>();
 	}
@@ -20,7 +27,7 @@ namespace Logging
 	void RealLogger::logString(LogLevel level, const std::string& msg)
 	{
 #ifdef DEBUG
-		std::string logString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + msg;
+		std::string logString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + msg + "\r\n";
 		m_pOutputGateway->addLogString(logString);
 #else
 		if (msg.size() > MAX_LOG_QUEUE_SIZE_CHAR)

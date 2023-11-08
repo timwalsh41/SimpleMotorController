@@ -11,8 +11,6 @@
 #include "CommandInterface.h"
 #include <cstring>
 
-#include <iostream>
-
 namespace MessageHandling
 {
 
@@ -61,29 +59,22 @@ namespace MessageHandling
 
 	void OutputGateway::processOutgoingMessages()
 	{
-		std::cout << "Processing\n";
 		if (!m_receiving)
 			// nothing to do while we're in the middle of a transmission
 			return;
-
-		std::cout << "Past receiving check\n";
 
 		// send one message or log entry, if any exist, we only send one per call
 		// to allow for transmission
 		if (!m_messageQueue.empty())
 		{
-			std::cout << "Sending message\n";
 			transmitMessage(m_messageQueue.front());
 			m_messageQueue.pop();
 		}
 		else if (!m_logStringQueue.empty())
 		{
-			std::cout << "Sending string: " << m_logStringQueue.front() << "\n";
 			transmitString(m_logStringQueue.front());
 			m_logStringQueue.pop();
 		}
-
-		std::cout << "Done processing\n";
 	}
 
 	bool OutputGateway::messageToStringWithStartStop(std::string& outputString, const Message& inputMessage) const

@@ -182,12 +182,14 @@ namespace MotorControl {
 
 	bool MotorCommandHandler::injectFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
+		m_pLogger->logString(info, "Injecting motor fault");
 		m_pController->injectFault();
 		return true;
 	}
 
 	bool MotorCommandHandler::clearFault(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
+		m_pLogger->logString(info, "Attempting to clear motor fault");
 		m_pController->clearFault();
 		return true;
 	}

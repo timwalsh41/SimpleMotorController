@@ -31,7 +31,10 @@ namespace MotorControl
 		auto nullMotorCommand = static_cast<std::unique_ptr<MotorCommand>>(nullptr);
 
 		if (m_state->getId() == FAULT)
-			nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
+			// TODO: do we want to automatically clear the fault?
+			// attempt to clear fault
+			// nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
+			__asm__("nop");
 		else if (m_pMotorDriver->isDriverFaulted())
 			// TODO: Could move fault detection to interrupt
 			nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});

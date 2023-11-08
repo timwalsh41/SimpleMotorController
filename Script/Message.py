@@ -79,7 +79,9 @@ class Message:
 
     def set_crc(self):
       """Calculate and set the CRC based on the current command code and payload."""
-      data_to_crc_check = [self.command_code] + list(self.payload)
+      data_to_crc_check = [self.command_code]
+      if self.payload is not None:
+          data_to_crc_check += list(self.payload)
       self.crc = self._calculate_crc(data_to_crc_check)
 
 
@@ -90,7 +92,8 @@ class Message:
       # Add the command code.
       byte_array.append(self.command_code)
       # Add the payload.
-      byte_array.extend(self.payload)
+      if self.payload is not None:
+        byte_array.extend(self.payload)
       # Add the CRC.
       byte_array.extend(struct.pack('H',self.crc))
       # Add the stop sequence.

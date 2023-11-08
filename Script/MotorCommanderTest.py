@@ -1,7 +1,7 @@
 import MotorCommander
 import logging
 import time
-port = '/dev/usb0'
+port = '/dev/ttyACM0'
 
 # TO DO:
 # - update sleep command to enforce 50 ms repeat rate

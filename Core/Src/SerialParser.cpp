@@ -9,6 +9,7 @@
 #include "Message.h"
 #include "MessageHandler.h"
 #include "SingletonFactory.h"
+#include "IOutputGateway.h"
 #include <cstring>
 
 namespace MessageHandling
@@ -76,15 +77,18 @@ namespace MessageHandling
 		std::vector<uint8_t> stopSequenceCandidate{};
 		stopSequenceCandidate.reserve(STOP_SEQUENCE_LENGTH);
 
-		// check for timeout in transmission
 		if (m_pTimebase->getTime_ms() < m_lastCharReceivedTime)
 			// clock has rolled over, neglect potential timeout
 			m_lastCharReceivedTime = m_pTimebase->getTime_ms();
-		else if ((m_pTimebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
+
+		if (m_state != IDLE)
 		{
-			m_pLogger->logString(warning, "Serial packet timed out before completion, discarding");
-			m_incomingBuffer = {};
-			m_state = IDLE;
+			if ((m_pTimebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
+			{
+				m_pLogger->logString(warning, "Serial packet timed out before completion, discarding");
+				m_incomingBuffer = {};
+				m_state = IDLE;
+			}
 		}
 
 		while (!m_incomingBuffer.empty())
@@ -94,9 +98,11 @@ namespace MessageHandling
 
 			// C++ seems to be happiest when we append a char to a string using
 			// the push_back method
+#ifdef DEBUG
 			logString = "Received new character ";
 			logString.push_back(new_char);
 			m_pLogger->logString(debug, logString);
+#endif
 
 			switch(m_state)
 			{
@@ -113,7 +119,9 @@ namespace MessageHandling
 					if (sequenceMatch(START_SEQUENCE, m_startSequenceCandidate, START_SEQUENCE_LENGTH))
 					{
 						// we have matched the start sequence, move to RECEIVING state
+#ifdef DEBUG
 						m_pLogger->logString(debug, std::string("Received start sequence"));
+#endif
 						m_state = RECEIVING;
 						m_startSequenceCandidate.clear();
 					}
@@ -139,7 +147,9 @@ namespace MessageHandling
 						msg.loadFromBytes(m_candidateMessage, STOP_SEQUENCE_LENGTH);
 						m_pMessageHandler->loadIncomingMessage(msg);
 
+#ifdef DEBUG
 						m_pLogger->logString(debug, std::string("Received stop sequence, processing message"));
+#endif
 
 						// we are finished receiving the current message so return to IDLE
 						m_state = IDLE;

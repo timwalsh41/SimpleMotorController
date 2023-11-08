@@ -1,6 +1,6 @@
 # This must be kept in sync with Core/Inc/CommandInterface.h
-START_SEQUENCE = ['R', 'U', 'S', 'T'];
-STOP_SEQUENCE = ['S', 'T', 'O', 'P'];
+START_SEQUENCE = [0x52, 0x55, 0x53, 0x54];  # R,U,S,T
+STOP_SEQUENCE = [0x53, 0x54, 0x4F, 0x50];   # S,T,O,P
 
 # Minimum message length consists of start sequence, stop sequence,
 # command code, and 2-byte CRC

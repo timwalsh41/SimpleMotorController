@@ -33,7 +33,17 @@ class DriverStatus:
     DriveLevel: float
     TimeInState_ms: int
 
-    def __init__(self, payload: bytearray):
+    def __init__(self, payload: bytearray = None):
+        if payload is None:
+            self.ControllerState = MotorControlState.UNSET
+            self.ForwardDirection = True
+            self.IsFaulted = False
+            self.IsSleeping = False
+            self.IsLogMessageAvailable = False
+            self.DriveLevel = 0
+            self.TimeInState_ms = 0
+            return
+        
         if type(payload) != bytearray or len(payload) != 9:
             raise ValueError('Invalid status message packet received')
         
@@ -56,3 +66,28 @@ class MotorStatus:
     Position: float
     Speed: float
     Current: float
+
+    def __init__(self, position = None, speed = None, current = None):
+        if position is None:
+            self.Position = 0
+        else:
+            try:
+                self.Position = float(position)
+            except:
+                raise TypeError ('Position must be a numeric value')
+            
+        if speed is None:
+            self.Speed = 0
+        else:
+            try:
+                self.Speed = float(speed)
+            except:
+                raise TypeError ('Speed must be a numeric value')
+            
+        if current is None:
+            self.Current = 0
+        else:
+            try:
+                self.Current = float(current)
+            except:
+                raise TypeError ('Current must be a numeric value')
