@@ -1,0 +1,9 @@
+#!/bin/bash
+
+pythonSourceFolder="/home/tim/Documents/Code/STM32CubeIDE/STM32L432MotorControl/SimpleMotorControl/Script/Src"
+
+if [[ "$PYTHONPATH" != *"$pythonSourceFolder"* ]]; then
+  PYTHONPATH="${PYTHONPATH}:${pythonSourceFolder}"
+fi
+
+python3 -m pytest

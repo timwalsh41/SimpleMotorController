@@ -19,9 +19,8 @@ class IOutputGateway
 public:
 	virtual ~IOutputGateway() {}
 
-	virtual void addLogString(std::string& msg) = 0;
 	virtual void sendMessage(MessageHandling::Message& msg) = 0;
-	virtual void processOutgoingMessages() = 0;
+	virtual void processMessages() = 0;
 };
 
 } /* namespace MessageHandling */

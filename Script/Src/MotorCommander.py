@@ -3,9 +3,11 @@ import MotorDriver
 import MotorCommanderDataClasses
 import logging
 import struct
+import time
 import numpy as np
 from datetime import datetime
-from Message import Message
+from collections import deque
+from Message import Message, MessageParsingErrorCode
 
 # Note we don't implement the commands to get motor PWM drive level and direction since these are returned as
 # part of the status byte
@@ -19,8 +21,10 @@ CURRENT_SENSOR_MEASUREMENTS_PER_MS = 20
 
 class MotorCommander:
     def __init__(self, port):
-        self._messageQueue = []
+        self._messageQueue = deque()
         self._commandLabelMap = {}
+        self._messageBytes = bytearray()
+
         self._driverStatus = MotorCommanderDataClasses.DriverStatus()
         self._motorStatus = MotorCommanderDataClasses.MotorStatus()
         self._buildCommandLabelMap()
@@ -37,19 +41,11 @@ class MotorCommander:
             raise MotorCommanderException(f'Unable to open motor driver on {port}')
 
         # get version
-        self.requestVersion()
-        returnMessage = Message()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Invalid response from motor driver when reading version')
-        self._parseResponse(returnMessage)
-
-        # get status
-        self.requestStatus()
-        returnMessage = Message()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Invalid response from motor driver when reading status')
-        self._parseResponse(returnMessage)
-        self._printStatus()
+        # self.requestVersion()
+        # returnMessage = Message()
+        # if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
+        #     raise MotorCommanderException('Invalid response from motor driver when reading version')
+        # self._parseResponse(returnMessage)
 
 
     def _initializeLogging(self):
@@ -74,55 +70,47 @@ class MotorCommander:
         self._logger = logging.getLogger(__name__)
 
 
-    def _sendMessageAndGetResponse(self, outMsg: Message, retMsg: Message):
-        self._motorDriver.sendBytes(outMsg.to_byte_array())
-        response = self._motorDriver.readResponse()
-
-        if len(response) == 0:
-            return False
-        
-        retMsg.loadFromMessage(response)
-        return True
-
-
     def tick(self):
-        # send messages in queue and process responses
-        returnMessage = Message()
-        while len(self._messageQueue) > 0:
-            if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-                raise MotorCommanderException('Motor driver not responding')
-            self._parseResponse(returnMessage)    
+        continueFlag = True
 
-        # get status
+        # standard commands to run each iteration of the tick loop
+        # these function calls will add messages to the command queue that will
+        # then be transmitted in the loop below 
         self.requestStatus()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Motor driver not responding')
-        self._parseResponse(returnMessage)
-
-        # get motor position
         self.requestMotorPosition()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Motor driver not responding')
-        self._parseResponse(returnMessage)
-
-        # get motor speed
         self.requestMotorSpeed()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Motor driver not responding')
-        self._parseResponse(returnMessage)
+        self.requestMeanCurrent()
 
-        # get motor current
-        self.requestMotorCurrent()
-        if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-            raise MotorCommanderException('Motor driver not responding')
-        self._parseResponse(returnMessage)
+        while continueFlag:
+            # send messages in queue            
+            if len(self._messageQueue) > 0:
+                self._motorDriver.sendBytes(self._messageQueue.popleft().to_byte_array())
+                
+            # read any available response from the driver
+            response = self._motorDriver.readBytes()
+            if len(response) == 0:
+                # if we're not getting responses, then assume we can stop
+                # (this is overrided below if there are more messages to transmit)
+                continueFlag = False
+            else:
+                self._messageBytes.extend(response)
+                msg = Message()
+                messageParseSuccess = MessageParsingErrorCode.NO_ERROR
+                while messageParseSuccess == MessageParsingErrorCode.NO_ERROR and len(self._messageBytes) > 0:                    
+                    messageParseSuccess, self._messageBytes = msg.loadFromBytes(self._messageBytes)
 
-        # check for log messages
-        while self._driverStatus.IsLogMessageAvailable:
-            self.requestLogMessage()
-            if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-                raise MotorCommanderException('Motor driver not responding')
-            self._parseResponse(returnMessage)
+                    if messageParseSuccess == MessageParsingErrorCode.NO_ERROR:
+                        self._parseResponse(msg)
+                    else:
+                        if msg.command_code is not None:
+                            self._logger.error(f'Error parsing {self._commandLabelMap[msg.command_code & ~CommandInterface.ACK_BIT_MASK]} message: {messageParseSuccess.name}')
+                        else:
+                            self._logger.error(f'Error parsing message: {messageParseSuccess.name}')
+            
+            if len(self._messageQueue) > 0:
+                continueFlag = True
+
+            time.sleep(0.001)
 
 
     def _checkStatusByte(self, msg: Message):
@@ -131,28 +119,37 @@ class MotorCommander:
 
         # and get the command string
         if commandCode not in self._commandLabelMap.keys():
-            raise MotorCommanderException(f'Unknown command code returned by motor driver: 0x{commandCode:x}')
+            self._logger.error(f'Unknown command code returned by motor driver: 0x{commandCode:02x}')
+            return False
 
         commandString = self._commandLabelMap[commandCode]
 
         if msg.payload[0] == CommandInterface.ACK_INVALID_COMMAND:
-            raise MotorCommanderException(f'Invalid command received at motor driver: 0x{msg.command_code:x}')
+            self._logger.error(f'Invalid command received at motor driver: 0x{msg.command_code:02x}')
+            return False
         elif msg.payload[0] == CommandInterface.ACK_INVALID_CRC:
-            raise MotorCommanderException(f'Invalid CRC in {commandString} message sent to driver')
+            self._logger.error(f'Invalid CRC in {commandString} message sent to driver')
+            return False
         elif msg.payload[0] == CommandInterface.ACK_COMMAND_ERROR:
-            raise MotorCommanderException(f'Error processing {commandString} command in motor driver')
+            self._logger.error(f'Error processing {commandString} command in motor driver')
+            return False
         elif msg.payload[0] != CommandInterface.ACK_SUCCESSFUL:
-            raise MotorCommanderException(f'Unknown return status code in {commandString} command: {msg.payload[0]}')
+            self._logger.error(f'Unknown return status code in {commandString} command: {msg.payload[0]}')
+            return False
+        
+        return True
 
 
-    def _parseResponse(self, msg: Message):
-        if len(msg.payload) < 1:
-            raise MotorCommanderException(f'Empty payload in message returned from driver; command code {msg.command_code}')
-
-        self._checkStatusByte(msg)
+    def _parseResponse(self, msg: Message):        
+        if not self._checkStatusByte(msg):
+            return
 
         # extract the raw command code from the acked command code
         commandCode = (msg.command_code & ~CommandInterface.ACK_BIT_MASK) & CommandInterface.BYTE_MASK
+
+        if msg.payload is None or len(msg.payload) < 1:
+            self._logger.error(f'Empty payload in message returned from driver; command code {msg.command_code}')
+            return
 
         if commandCode == CommandInterface.CMD_GET_VERSION:
             self._parseVersion(msg)
@@ -164,6 +161,8 @@ class MotorCommander:
             self._parseMotorSpeed(msg)
         elif commandCode == CommandInterface.CMD_GET_MOTOR_CURRENT:
             self._parseMotorCurrent(msg)
+        elif commandCode == CommandInterface.CMD_GET_MEAN_CURRENT:
+            self._parseMeanCurrent(msg)
         elif commandCode == CommandInterface.CMD_GET_LOG_MESSAGE:
             self._parseLogMessage(msg)
         elif commandCode in CommandInterface.NO_RESPONSE_PAYLOAD_COMMANDS:
@@ -233,9 +232,11 @@ class MotorCommander:
     
     def _parseStatus(self, msg: Message):
         payload = msg.payload
-        if len(payload) != 8:
-            raise(ValueError('Invalid payload in status message'))
+        if len(payload) != 9:
+            self._logger.error(f'Invalid payload in status message (payload length {len(payload)})')
+            return
 
+        self._logger.debug('Successfully parsed motor status')
         self._driverStatus = MotorCommanderDataClasses.DriverStatus(msg.payload)
 
 
@@ -250,7 +251,7 @@ class MotorCommander:
     def _parseLogMessage(self, msg: Message):
         payload = msg.payload
         if len(payload) < 3:
-            raise(ValueError('Invalid payload in log message'))
+            self._logger.error('Invalid payload in log message')
 
         logMessagesRemaining = struct.unpack('H', payload[1:3])
 
@@ -261,16 +262,18 @@ class MotorCommander:
             # we have retrieved the last message available
             self._driverStatus.IsLogMessageAvailable = False
 
-        logTimestamp = struct.unpack('I', payload[3:7])
-        messageLength = struct.unpack('H', payload[7:9])
-        messageSeverity = payload[9]
+        # logTimestamp = struct.unpack('I', payload[3:7])[0]
+        messageLength = struct.unpack('H', payload[7:9])[0]
+        # messageSeverity = payload[9]
 
         # check that payload length matches the expected message length
         if len(payload) != 10 + messageLength:
             self._logger.error('Received log message does not match expected length')
 
         logMessage = payload[10:].decode('ascii', 'ignore')
-        self._logger.info(f'DRIVER LOG::{logTimestamp}::{CommandInterface.LOG_SEVERITY_MAP[messageSeverity]}::{logMessage}')        
+
+        # cut off the '\r\n' from the transmitted message
+        self._logger.info(f'DRIVER LOG::{logMessage[:-2]}')        
 
 
     def rampMotorOn(self, driveLevel: int, rampTime_ms: int, forwardDirection: bool):
@@ -339,8 +342,10 @@ class MotorCommander:
     def _parseMotorPosition(self, msg: Message):
         payload = msg.payload
         if len(payload) != 5:
-            raise ValueError('Invalid payload in motor position message')
-
+            self._logger.error(f'Invalid payload in motor position message (payload length {len(msg.payload)})')
+            return
+        
+        self._logger.debug('Sucessfully parsed motor position')
         self._motorStatus.Position = struct.unpack('i', payload[1:5])[0]
 
 
@@ -355,8 +360,10 @@ class MotorCommander:
     def _parseMotorSpeed(self, msg: Message):
         payload = msg.payload
         if len(payload) != 5:
-            raise ValueError('Invalid payload in motor speed message')
+            self._logger.error('Invalid payload in motor speed message')
+            return
 
+        self._logger.debug('Successfully parsed motor speed')
         self._motorStatus.Speed = struct.unpack('f', payload[1:5])[0]
 
 
@@ -381,15 +388,45 @@ class MotorCommander:
         payload_len = 1 + 2 + CURRENT_DATA_MS*CURRENT_SENSOR_MEASUREMENTS_PER_MS*4
 
         if len(payload) != payload_len:
-            raise ValueError('Invalid payload length in motor speed message')
+            self._logger.error('Invalid payload length in motor current message')
+            return
         
-        num_samples = struct.unpack('H', msg.payload[1:3])
+        num_samples = struct.unpack('H', msg.payload[1:3])[0]
         if num_samples != CURRENT_DATA_MS*CURRENT_SENSOR_MEASUREMENTS_PER_MS:
-            raise ValueError('Number of current samples returned does not match expected value')
+            self._logger.error('Number of current samples returned does not match expected value')
+            return
 
         unpackFormatString = f'{num_samples}f'
         currentMeasurementArray = struct.unpack(unpackFormatString, msg.payload[3:])
         self._motorStatus.Current = np.mean(currentMeasurementArray)
+        self._logger.debug('Successfully parsed motor current')
+
+
+    def requestMeanCurrent(self):
+        msg = Message()
+        msg.command_code = CommandInterface.CMD_GET_MEAN_CURRENT
+
+        # motor current request payload contains number of ms of data to request
+        # we will request 50 ms of data, which is our default tick time
+        bytes = struct.pack('H', CURRENT_DATA_MS)
+        msg.payload = bytes
+        msg.set_crc()
+
+        self._messageQueue.append(msg)
+
+
+    def _parseMeanCurrent(self, msg: Message):
+        payload = msg.payload
+
+        # payload length = 1 ack byte + 4 byte floats mean current value
+        payload_len = 5
+
+        if len(payload) != payload_len:
+            self._logger.error('Invalid payload length in mean current message')
+            return
+        
+        self._motorStatus.Current = struct.unpack('f', payload[1:])[0]
+        self._logger.debug('Successfully parsed mean current')
 
 
     def setMaxDutyCycle(self, dutyCycle: int):
@@ -407,15 +444,20 @@ class MotorCommander:
         self._messageQueue.append(msg)
 
 
-    def _printStatus(self):
+    def printStatus(self):
+        driverState = MotorCommanderDataClasses.MotorControlState(self._driverStatus.ControllerState)
+        
         self._logger.info('Motor driver status:')
-        self._logger.info(f'\tState:{MotorCommanderDataClasses.MotorStatusLabel[self._driverStatus.ControllerState]}')
-        self._logger.info(f'\tDirection: {"forward" if status.ForwardDirection else "reverse"}')
+        self._logger.info(f'\tState:{MotorCommanderDataClasses.MotorStatusLabel[driverState]}')
+        self._logger.info(f'\tDirection: {"forward" if self._driverStatus.ForwardDirection else "reverse"}')
         self._logger.info(f'\tSleeping: {self._driverStatus.IsSleeping}')
         self._logger.info(f'\tFaulted: {self._driverStatus.IsFaulted}')
         self._logger.info(f'\tLog messages available? {self._driverStatus.IsLogMessageAvailable}')
         self._logger.info(f'\tMotor drive level: {self._driverStatus.DriveLevel}')
         self._logger.info(f'\tTime in state: {self._driverStatus.TimeInState_ms} ms')
+        self._logger.info(f'\tMotor position: {self._motorStatus.Position}')
+        self._logger.info(f'\tMotor speed: {self._motorStatus.Speed}')
+        self._logger.info(f'\tMotor current: {self._motorStatus.Current}')
 
     
     def _buildCommandLabelMap(self):
@@ -435,6 +477,7 @@ class MotorCommander:
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_SPEED] = "Get motor speed"
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_DIR] = "Get motor direction"
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_CURRENT] = "Get motor current"
+        self._commandLabelMap[CommandInterface.CMD_GET_MEAN_CURRENT] = "Get mean current"
         
         self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_ON] = "Ramp motor on"
         self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_OFF] = "Ramp motor off"

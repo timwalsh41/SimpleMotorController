@@ -30,17 +30,6 @@ class OutputGatewayTest : public ::testing::Test
         MessageHandling::OutputGateway m_outputGateway{static_cast<IUartWrapper*>(&m_uartWrapper)};
 };
 
-TEST_F(OutputGatewayTest, sendString) {
-    std::string baseString = "I am a super test string";
-    std::string copyString(baseString);
-
-    // the provided string will be moved, so copyString will be a hollow object
-    m_outputGateway.addLogString(copyString);
-
-    EXPECT_CALL(m_uartWrapper, transmitString(::testing::StrEq(baseString))).Times(1);
-    m_outputGateway.processOutgoingMessages();
-}
-
 TEST_F(OutputGatewayTest, sendMessage) {
     MessageHandling::Message msg;
     std::vector<uint8_t> payload{'A', 'B', 'C', 'D', 'E'};
@@ -66,17 +55,5 @@ TEST_F(OutputGatewayTest, sendMessage) {
     m_outputGateway.sendMessage(msg);
 
     EXPECT_CALL(m_uartWrapper, transmitString(::testing::StrEq(expectedOutputString))).Times(1);
-    m_outputGateway.processOutgoingMessages();
+    m_outputGateway.processMessages();
 }
-
-/*
-TODO:
-[x] Unify namespace approach for interface & mock objects - are they in the name space or out?
-[x] Create MockUartGateway
-
-
-TESTS:
-[x] Add/transmit log string
-[x] Add/transmit message (test message to string conversion with headers/CRC)
-
-*/

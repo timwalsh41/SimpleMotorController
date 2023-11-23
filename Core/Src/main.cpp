@@ -62,6 +62,7 @@ using Logging::RealLogger;
 /* USER CODE BEGIN PD */
 constexpr uint32_t MAIN_LOOP_TIME_MS = 1;
 constexpr uint32_t LED_BLINK_TIME_MS = 500;
+constexpr uint32_t HEARTBEAT_TIME_MS = 5000;
 
 /* USER CODE END PD */
 
@@ -81,9 +82,11 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
-uint8_t UartRcvBuffer;
+uint8_t UartRcvBuffer[UART_RECEIVE_BUFFER_SIZE];
+int32_t UartDmaIdx = 0;
 
 /* USER CODE END PV */
 
@@ -98,7 +101,7 @@ static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void processUartDma();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -115,6 +118,8 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint32_t mainLoopTimer = 0;
   uint32_t ledTimer = 0;
+  uint32_t heartbeatTimer = 0;
+  std::string heartbeatMsg = "Heartbeat";
 
   SingletonFactory factory;
 
@@ -181,7 +186,11 @@ int main(void)
   HAL_TIM_Base_Start(&htim6);
   HAL_ADC_Start_DMA(&hadc1, pCurrentSensor->getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 
-  HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
+  HAL_UART_Receive_DMA(&huart2, UartRcvBuffer, UART_RECEIVE_BUFFER_SIZE);
+
+  if (HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_ALL) != HAL_OK)
+  		Error_Handler();
+  theMotorDriver.zeroEncoder();
 
 #ifdef DEBUG
   uint8_t version[3];
@@ -209,9 +218,10 @@ int main(void)
 
 	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
 	{
+		processUartDma();
 		pSerialParser->ProcessIncomingData();
 		theMessageHandler.processMessages();
-		pOutputGateway->processOutgoingMessages();
+		pOutputGateway->processMessages();
 		pCurrentSensor->processCurrentMeasurements();
 		pController->tick();
 
@@ -222,10 +232,16 @@ int main(void)
 		clearFlag();
 	}
 
-	if ((HAL_GetTick() - ledTimer) >= LED_BLINK_TIME_MS)
+	if (Utility::timeElapsed(ledTimer, HAL_GetTick()) >= LED_BLINK_TIME_MS)
 	{
 		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 		ledTimer = HAL_GetTick();
+	}
+
+	if (Utility::timeElapsed(heartbeatTimer, HAL_GetTick()) >= HEARTBEAT_TIME_MS)
+	{
+		pLogger->logString(debug, heartbeatMsg);
+		heartbeatTimer = HAL_GetTick();
 	}
   }
   /* USER CODE END 3 */
@@ -722,9 +738,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	SingletonFactory factory;
-	auto pSerialParser = factory.retrieve<SerialParser>();
-	pSerialParser->ReceiveChar(UartRcvBuffer);
+	// SingletonFactory factory;
+	// auto pSerialParser = factory.retrieve<SerialParser>();
+	// pSerialParser->ReceiveChar(UartRcvBuffer);
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -732,7 +748,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	SingletonFactory factory;
 	auto pOutputGateway = factory.retrieve<IOutputGateway>();
 
-	HAL_UART_Receive_IT(&huart2, &UartRcvBuffer, 1);
+	HAL_UART_Receive_DMA(&huart2, UartRcvBuffer, UART_RECEIVE_BUFFER_SIZE);
 	std::static_pointer_cast<OutputGateway>(pOutputGateway)->setReceiving();
 }
 
@@ -760,6 +776,39 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			pController->injectFault();
 }
 
+void processUartDma()
+{
+	SingletonFactory factory;
+	auto pSerialParser = factory.retrieve<SerialParser>();
+	std::vector<uint8_t> newChars{};
+
+	// atomic operation - we'll pause the DMA transfer while we grab the
+	// available bytes
+	__disable_irq();
+	HAL_UART_DMAPause(&huart2);
+	int32_t new_pos = UART_RECEIVE_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(huart2.hdmarx);
+
+	if (new_pos != UartDmaIdx) { // New data has arrived
+		if (new_pos > UartDmaIdx) { // No overflow
+			// Process data from buffer[old_pos] to buffer[new_pos-1]
+			newChars.insert(newChars.end(), &UartRcvBuffer[UartDmaIdx], &UartRcvBuffer[new_pos]);
+		} else { // Overflow
+			// First process data from buffer[old_pos] to buffer[BUFFER_SIZE-1]
+			newChars.insert(newChars.end(), &UartRcvBuffer[UartDmaIdx], &UartRcvBuffer[UART_RECEIVE_BUFFER_SIZE]);
+
+			// Then process data from buffer[0] to buffer[new_pos-1]
+			newChars.insert(newChars.end(), &UartRcvBuffer[0], &UartRcvBuffer[new_pos]);
+		}
+
+		UartDmaIdx = new_pos;
+		pSerialParser->ReceiveChars(newChars);
+	}
+
+	HAL_UART_DMAResume(&huart2);
+	__enable_irq();
+	// end atomic operation
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -773,6 +822,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+
   }
   /* USER CODE END Error_Handler_Debug */
 }

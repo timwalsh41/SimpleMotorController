@@ -96,7 +96,7 @@ namespace MessageHandling
 		// Useful CRC calculator to validate code:
 		// http://www.zorc.breitbandkatze.de/crc.html
 
-		uint16_t rem = 0;
+		uint16_t rem = 0xFFFF;
 
 		auto processWord = [](uint16_t rem, uint8_t byte)
 		{
@@ -141,6 +141,12 @@ namespace MessageHandling
 			m_payload = payload;
 	}
 
+	void Message::setPayload(std::vector<uint8_t>&& payload)
+	{
+		if (!payload.empty())
+			m_payload = std::move(payload);
+	}
+
 	void Message::setPayload(const uint8_t& payload)
 	{
 		m_payload.clear();
@@ -181,40 +187,34 @@ namespace MessageHandling
 		return *this;
 	}
 
-	// Convert the message to a byte array, this will allocate memory for the byte array and assign
-	// to the *message argument; the caller is responsible to free the memory
-	// This serialization includes the command code, payload, and crc; for transmission the start and
-	// end sequences should be added by the caller
-	bool Message::toByteArray(uint8_t **message, uint32_t& length) const
+	// Convert the message to a byte array. This serialization includes the command code,
+	// payload, and crc; for transmission the start and end sequences should be added by
+	// the caller
+	bool Message::toByteArray(std::vector<uint8_t>& message) const
 	{
 		if (!checkCRC())
 		{
-			length = 0;
 			m_pLogger->logString(error, "Unable to serialize message, CRC mismatch");
 			return false;
 		}
 
 		// total length includes header (command code, CRC, etc.) plus payload length
-		length = MINIMUM_MESSAGE_LENGTH + m_payload.size();
+		uint32_t arrayLength = MINIMUM_MESSAGE_LENGTH + m_payload.size();
 
-		*message = new uint8_t[length];
+		message.reserve(arrayLength);
 
-		if (message == nullptr)
+		if (message.capacity() != arrayLength)
 		{
 			m_pLogger->logString(error, "Unable to serialize message, cannot allocate memory for byte array");
 			return false;
 		}
 
-		// the double pointer management here is tricky, see extensive notes in
-		// OutputGateway::addStartStopSequence
-
-		*message[0] = m_commandCode;
+		message.push_back(m_commandCode);
 		if (!m_payload.empty())
-			std::memcpy(*message+1, m_payload.data(), m_payload.size());
+			message.insert(message.end(), m_payload.begin(), m_payload.end());
 
-		// note this stores in little endian format (least significant byte at the lowest
-		// memory address)
-		std::memcpy(*message + length - 2, &m_crc, 2);
+		message.push_back(static_cast<uint8_t>((m_crc >> 0) & 0xFF));
+		message.push_back(static_cast<uint8_t>((m_crc >> 8) & 0xFF));
 
 		return true;
 	}

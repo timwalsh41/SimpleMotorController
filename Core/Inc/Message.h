@@ -53,10 +53,11 @@ namespace MessageHandling
 		void clearAck() { m_commandCode &= ~ACK_BIT_MASK; }
 		void setPayload(const std::vector<uint8_t>& payload);
 		void setPayload(const uint8_t&);
+		void setPayload(std::vector<uint8_t>&& payload);
 
 		const std::vector<uint8_t>& getPayload() const { return m_payload; }
 
-		bool toByteArray(uint8_t **message, uint32_t& length) const;
+		bool toByteArray(std::vector<uint8_t>& message) const;
 
 	private:
 		uint16_t calculateMessageCRC() const;

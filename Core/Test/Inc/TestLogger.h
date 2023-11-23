@@ -22,7 +22,6 @@ namespace Logging
 		TestLogger();
 
 		void logString(LogLevel level, const std::string& msg) override;
-		bool logMessagesPending() override;
 		bool retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	};
 

@@ -29,7 +29,7 @@ class MessageTest : public ::testing::Test
         // http://www.zorc.breitbandkatze.de/crc.html
         uint16_t calculate_crc(uint8_t* bytes, uint16_t len)
         {
-            uint16_t rem = 0;
+            uint16_t rem = 0xFFFF;
 
 	        auto processWord = [](uint16_t rem, uint8_t byte)
 	        {
@@ -202,20 +202,16 @@ TEST_F(MessageTest, ToByteArray) {
     // the toByteArray function checks the CRC, so it needs to be set properly
     msg.setCRC();
     
-    uint8_t* bytes{nullptr};
-    uint32_t len{0};
-    EXPECT_TRUE(msg.toByteArray(&bytes, len));
+    std::vector<uint8_t> bytes{};
+    EXPECT_TRUE(msg.toByteArray(bytes));
     
     // length should be equal to payload length plus 3 (one byte command code plus two byte CRC)
-    EXPECT_EQ(len, msg.getPayloadLength() + 3);
+    EXPECT_EQ(bytes.size(), msg.getPayloadLength() + 3);
     
     for (size_t i = 0; i < 7; i++)
     {
         std::cout << i << ". " << std::hex << msgBytes[i] << " <==> " << bytes[i] << "\n";
         EXPECT_EQ(msgBytes[i], bytes[i]);
    }  
-        
-    if (len > 0)
-        delete[] bytes;
 }
 

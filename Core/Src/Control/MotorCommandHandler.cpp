@@ -46,11 +46,14 @@ namespace MotorControl {
 	{
 		// get position from motor driver
 		int32_t position = m_pController->getMotorPosition();
+		uint32_t* p_position;
+		p_position = reinterpret_cast<uint32_t*>(&position);
 
-		// now copy it over into the payload byte array
-		// TODO: verify this works, and is memory safe
 		payload.reserve(4);
-		std::memcpy(payload.data(), &position, 4);
+		payload.push_back(static_cast<uint8_t>((*p_position >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_position >> 8) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_position >> 16) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_position >> 24) & 0xFF));
 
 		return true;
 	}
@@ -59,11 +62,14 @@ namespace MotorControl {
 	{
 		// get position from motor driver
 		float speed = m_pController->getMotorSpeed();
+		uint32_t* p_speed;
+		p_speed = reinterpret_cast<uint32_t*>(&speed);
 
-		// now copy it over into the payload byte array
-		// TODO: verify this works, and is memory safe
 		payload.reserve(4);
-		std::memcpy(payload.data(), &speed, 4);
+		payload.push_back(static_cast<uint8_t>((*p_speed >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_speed >> 8) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_speed >> 16) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_speed >> 24) & 0xFF));
 
 		return true;
 	}
@@ -207,7 +213,9 @@ namespace MotorControl {
 		statusByte |= (m_pController->getMotorDirection() ? 1 : 0) << 0;	// bit 0: motor direction
 		statusByte |= (m_pController->isDriverFaulted() ? 1 : 0) << 1;	// bit 1: driver fault status
 		statusByte |= (m_pController->isDriverSleeping() ? 1 : 0) << 2;	// bit 2: driver sleep status
-		statusByte |= (m_pLogger->logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
+
+		// deprecated - we do not buffer log messages any more
+		// statusByte |= (m_pLogger->logMessagesPending() ? 1 : 0) << 3;	// bit 3: log messages pending
 		payload.push_back(statusByte);
 
 		// bytes 2-3: motor drive level (tenths of a percent)

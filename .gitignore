@@ -5,5 +5,7 @@ Core/Test/MockMemoryLeak/
 .vscode/
 *.log
 Script/__pycache__
+Script/Src/__pycache__
+Script/Test/__pycache__
 2023-09 To do tracking
 

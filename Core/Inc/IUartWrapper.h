@@ -16,7 +16,7 @@ class IUartWrapper
 {
 public:
 	virtual ~IUartWrapper() {}
-	virtual void transmitString(const std::string&) const = 0;
+	virtual void transmitString(std::string&) = 0;
 };
 
 #endif /* INC_IUARTWRAPPER_H_ */

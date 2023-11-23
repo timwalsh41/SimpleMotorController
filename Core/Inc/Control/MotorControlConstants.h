@@ -21,7 +21,7 @@ namespace MotorControl
 
 	// we will zero the encoder counter at this value, and then subtract off this
 	// offset to report a value centered at zero
-	constexpr int32_t ENCODER_ZERO_COUNT = 1073741824;
+	constexpr int32_t ENCODER_ZERO_COUNT = 32767;
 
 	constexpr uint32_t MOTOR_GEAR_RATIO = 50;
 	constexpr uint32_t ENCODER_PULSES_PER_MOTOR_REVOLUTION = 64;

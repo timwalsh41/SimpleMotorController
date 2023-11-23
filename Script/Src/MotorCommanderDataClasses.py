@@ -58,7 +58,7 @@ class DriverStatus:
 
         self.DriveLevel = struct.unpack('H', payload[3:5])[0]/10
 
-        self.TimeInState_ms = struct.unpack('I', payload[6:])[0]
+        self.TimeInState_ms = struct.unpack('I', payload[5:])[0]
 
 
 @dataclass

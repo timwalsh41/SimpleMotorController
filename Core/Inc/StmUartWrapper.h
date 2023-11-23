@@ -18,12 +18,13 @@ public:
 	StmUartWrapper(UART_HandleTypeDef* huart) : m_pUart{huart} {}
 	~StmUartWrapper() {}
 
-	void transmitString(const std::string&) const override;
+	void transmitString(std::string&) override;
 
 	UART_HandleTypeDef* getUartPointer() { return m_pUart; }
 
 private:
 	UART_HandleTypeDef* m_pUart;
+	std::string m_stringBuffer{};
 };
 
 #endif /* INC_STMUARTWRAPPER_H_ */

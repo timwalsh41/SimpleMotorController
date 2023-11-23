@@ -52,8 +52,11 @@ namespace Sensors
 
 		uint32_t* getCurrentBuffer() const;
 
-		// command handler to get motor current data
+		// command handler to get motor current data array
 		bool getMotorCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+
+		// command handler to return mean motor current
+		bool getMeanCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
 
 		void zeroCurrentSensor();
 

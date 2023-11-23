@@ -89,7 +89,7 @@ void MessageHandler::processMessages()
 						payload.insert(payload.end(), returnData.begin(), returnData.end());
 					}
 
-					msg.setPayload(payload);
+					msg.setPayload(std::move(payload));
 				}
 				else
 				{
@@ -148,6 +148,10 @@ void MessageHandler::buildCommandMap()
 			{
 				return m_pCurrentSensor->getMotorCurrent(msg, payload);
 			};
+	m_commandMap[CMD_GET_MEAN_CURRENT] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pCurrentSensor->getMeanCurrent(msg, payload);
+				};
 	m_commandMap[CMD_RAMP_MOTOR_ON] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				return m_pMotorCommandHandler->rampMotorOn(msg, payload);

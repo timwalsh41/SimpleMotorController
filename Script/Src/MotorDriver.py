@@ -32,6 +32,7 @@ class MotorDriver:
         elif self._port is not None:
             # open serial port at 921600 with default 8N1 settings
             self._serial = serial.Serial(self._port, baudrate=921600)
+            self._serial.flush()
 
             if self._serial.is_open:
                 self._logger.info(f'Opened port {self._port}')
@@ -60,18 +61,19 @@ class MotorDriver:
             raise ValueError('msg  must be a bytearray')
         
         self._serial.write(msg)
-
+        self._serial.flush()
+        
         # sleep to allow time for response
-        time.sleep(0.05)
+        time.sleep(0.002)
 
 
-    def readResponse(self):
+    def readBytes(self):
         # check bytes available to read, waiting for it to stabilize in case
         # we are in the middle of a transmission
         bytesAvailable = -1
         while bytesAvailable != self._serial.in_waiting:
             bytesAvailable = self._serial.in_waiting
-            time.sleep(0.05)
+            time.sleep(0.001)
 
         if bytesAvailable == 0:
             return bytearray()

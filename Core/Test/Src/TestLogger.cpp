@@ -19,15 +19,13 @@ namespace Logging
 	{
 		std::cout << m_pTimebase->getTime_ms() << ": [" << logLevelString[level] << "] " << msg << "\n";
 	}
-	
-	bool TestLogger::logMessagesPending()
+
+	// this function is not supported, but we need the callback in case we receive the command code
+	// basically the retrieve log message command code is used to send out log messages from the motor
+	// controller, so we do not require/accept the incoming command
+	bool TestLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
-	    return false;
-    }
-    
-    bool TestLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
-    {
-        return true;
-    }
+		return false;
+	}
 
 } // namespace Logging

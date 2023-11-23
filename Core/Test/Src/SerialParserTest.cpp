@@ -119,16 +119,10 @@ TEST_F(SerialParserTest, Timeout) {
     std::deque<uint8_t> chars{};
     chars.push_back('a');
     chars.push_back('b');
-    
-    for (size_t i = 0; i < START_SEQUENCE_LENGTH; ++i)
-        chars.push_back(START_SEQUENCE[i]);
-        
+    chars.insert(chars.end(), &START_SEQUENCE[0], &START_SEQUENCE[START_SEQUENCE_LENGTH]);
     chars.push_back('c');
     chars.push_back('d');
-    
-    for (size_t i = 0; i < STOP_SEQUENCE_LENGTH; ++i)
-        chars.push_back(STOP_SEQUENCE[i]);
-
+    chars.insert(chars.end(), &STOP_SEQUENCE[0], &STOP_SEQUENCE[STOP_SEQUENCE_LENGTH]);
     
     // process the first couple of chars prior to delay
     // note we need to start processing the start sequence here, otherwise we'll just
@@ -141,7 +135,10 @@ TEST_F(SerialParserTest, Timeout) {
     sp.ReceiveChar(chars.front());
     chars.pop_front();    
     sp.ReceiveChar(chars.front());
-    chars.pop_front();    
+    chars.pop_front();
+
+    // now if we try to process the incoming data, we should get a timeout
+    sp.ProcessIncomingData();
     
     // now delay
     std::this_thread::sleep_for(std::chrono::milliseconds(MessageHandling::SERIAL_TRANSMISSION_TIMEOUT_TICKS+20));

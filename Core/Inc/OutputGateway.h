@@ -19,7 +19,6 @@
 
 namespace MessageHandling
 {
-
 	class OutputGateway : public IOutputGateway
 	{
 	public:
@@ -28,20 +27,18 @@ namespace MessageHandling
 		OutputGateway(const OutputGateway&) = delete;
 		OutputGateway& operator=(const OutputGateway&) = delete;
 
-		void addLogString(std::string& msg) override;
 		void sendMessage(Message& msg) override;
-		void processOutgoingMessages() override;
+		void processMessages() override;
 		void setReceiving() { m_receiving = true; }
 		void setTransmitting() { m_receiving = false; }
 
 	private:
-		void transmitString(const std::string& outString);
+		void transmitString(std::string& outString);
 		void transmitMessage(const Message& outMessage);
 		bool messageToStringWithStartStop(std::string&, const Message&) const;
 
 		bool m_receiving = true;
 
-		std::queue<std::string> m_logStringQueue{};
 		std::queue<Message> m_messageQueue{};
 		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 		IUartWrapper* m_pUartWrapper;

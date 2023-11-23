@@ -2,9 +2,12 @@
 START_SEQUENCE = [0x52, 0x55, 0x53, 0x54];  # R,U,S,T
 STOP_SEQUENCE = [0x53, 0x54, 0x4F, 0x50];   # S,T,O,P
 
+# number of bytes in CRC
+CRC_LENGTH = 2
+
 # Minimum message length consists of start sequence, stop sequence,
 # command code, and 2-byte CRC
-MINIMUM_MESSAGE_LENGTH = len(START_SEQUENCE) + len(STOP_SEQUENCE) + 1 + 2
+MINIMUM_MESSAGE_LENGTH = len(START_SEQUENCE) + len(STOP_SEQUENCE) + 1 + CRC_LENGTH
 
 # Response code for command processed successfully
 ACK_SUCCESSFUL = 0x2B;      # '+'
@@ -26,23 +29,24 @@ BYTE_MASK = 0xFF;
 NO_LOG_MESSAGES_AVAILABLE = 0xFFFF
 
 # Commands
-CMD_ENABLE_MOTOR = 0x30;	# '0'
-CMD_DISABLE_MOTOR = 0x31;	# '1'
-CMD_SLEEP_DRIVER = 0x32;	# '2'
-CMD_WAKE_DRIVER = 0x33;		# '3'
-CMD_CLEAR_FAULT = 0x34;		# '4'
-CMD_GET_MOTOR_POS = 0x40;	# '@'
-CMD_GET_MOTOR_PWM = 0x41;	# 'A'
-CMD_GET_MOTOR_SPEED = 0x42;	# 'B'
-CMD_GET_MOTOR_DIR = 0x43;	# 'C'
-CMD_GET_MOTOR_CURRENT = 0x44;# 'D'
-CMD_RAMP_MOTOR_ON = 0x50;	# 'P'
-CMD_RAMP_MOTOR_OFF = 0x51;	# 'Q'
-CMD_SET_MAX_DC = 0x52;		# 'R'
-CMD_INJECT_FAULT = 0x60;	# '`'
-CMD_GET_VERSION = 0x70;		# 'p'
-CMD_GET_STATUS = 0x71;		# 'q'
-CMD_GET_LOG_MESSAGE = 0x72;	# 'r'
+CMD_ENABLE_MOTOR = 0x30	# '0'
+CMD_DISABLE_MOTOR = 0x31	# '1'
+CMD_SLEEP_DRIVER = 0x32 	# '2'
+CMD_WAKE_DRIVER = 0x33		# '3'
+CMD_CLEAR_FAULT = 0x34		# '4'
+CMD_GET_MOTOR_POS = 0x40	# '@'
+CMD_GET_MOTOR_PWM = 0x41	# 'A'
+CMD_GET_MOTOR_SPEED = 0x42	# 'B'
+CMD_GET_MOTOR_DIR = 0x43	# 'C'
+CMD_GET_MOTOR_CURRENT = 0x44# 'D'
+CMD_GET_MEAN_CURRENT = 0x45 # 'E'
+CMD_RAMP_MOTOR_ON = 0x50	# 'P'
+CMD_RAMP_MOTOR_OFF = 0x51	# 'Q'
+CMD_SET_MAX_DC = 0x52		# 'R'
+CMD_INJECT_FAULT = 0x60 	# '`'
+CMD_GET_VERSION = 0x70		# 'p'
+CMD_GET_STATUS = 0x71		# 'q'
+CMD_GET_LOG_MESSAGE = 0x72	# 'r'
 
 # These commands do not return a payload with data, we group
 # them here for standardized processing

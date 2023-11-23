@@ -45,6 +45,8 @@ namespace MotorControl
 		int32_t getEncoderCounts() const override{ return m_encoderCount; }
 		float getShaftRotationCount() const override;
 
+		void zeroEncoder();
+
 	private:
 		bool m_motorEnabled{false};
 		bool m_motorDirectionForward{true};
@@ -57,7 +59,6 @@ namespace MotorControl
 		void setHwDutyCycle(int32_t);
 
 		void updateEncoder();
-		void zeroEncoder();
 		void updateMotorDrive();
 	};
 

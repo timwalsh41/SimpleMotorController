@@ -7,6 +7,7 @@
 
 #include "RealLogger.h"
 #include "SingletonFactory.h"
+#include "CommandInterface.h"
 #include <string>
 
 namespace Logging
@@ -24,82 +25,74 @@ namespace Logging
 		m_pOutputGateway = factory.retrieve<MessageHandling::IOutputGateway>();
 	}
 
-	void RealLogger::logString(LogLevel level, const std::string& msg)
+	void RealLogger::logString(LogLevel level, const std::string& inputString)
 	{
-#ifdef DEBUG
-		std::string logString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + msg + "\r\n";
-		m_pOutputGateway->addLogString(logString);
-#else
-		if (msg.size() > MAX_LOG_QUEUE_SIZE_CHAR)
-		{
-			std::string errMsg{"Attempted to log message that exceeds queue length"};
-			m_logMessageQueue.emplace(m_pTimebase->getTime_ms(), warning, errMsg);
-			m_logLength_char += errMsg.size();
-		}
-		else
-		{
-			while (m_logLength_char + msg.size() < MAX_LOG_QUEUE_SIZE_CHAR)
-			{
-				m_logLength_char -= m_logMessageQueue.front().m_message.size();
-				m_logMessageQueue.pop();
-			}
-			m_logMessageQueue.emplace(m_pTimebase->getTime_ms(), level, msg);
-			m_logLength_char += msg.size();
-		}
-#endif
+		MessageHandling::Message msg;
+		std::string outputString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + inputString + "\r\n";
+		
+		// if we can allocate memory for the log string (e.g. logStringToMessage succeeds) we'll send it, otherwise there's nothing we can do...
+		if (logStringToMessage(msg, outputString, level))
+			m_pOutputGateway->sendMessage(msg);
 	}
 
-	// return true if there are log messages pending for the host to retrieve
-	bool RealLogger::logMessagesPending()
+	bool RealLogger::logStringToMessage(MessageHandling::Message& msg, std::string& logString, LogLevel level)
 	{
-#ifdef DEBUG
-		return false;
-#else
-		if (m_logMessageQueue.empty())
+		std::vector<uint8_t> payload;
+
+		if (!logStringToPayload(payload, logString, level))
 			return false;
 
+		msg.setCommandCode(CMD_GET_LOG_MESSAGE);
+		msg.setAck();
+		msg.setPayload(std::move(payload));
+		msg.setCRC();
+
 		return true;
-#endif
+	}
+			
+	bool RealLogger::logStringToPayload(std::vector<uint8_t>& payload, std::string& logString, LogLevel level)
+	{
+		payload.clear();
+
+		// payload length is 9 bytes plus the message length
+		payload.reserve(LOG_MESSAGE_PAYLOAD_HEADER_SIZE + logString.size());
+
+		if (payload.capacity() < LOG_MESSAGE_PAYLOAD_HEADER_SIZE + logString.size())
+			return false;
+
+		// first byte is the acknowledgement
+		payload.push_back(ACK_SUCCESSFUL);
+
+		// next two bytes are the number of log messages remaining
+		payload.push_back(static_cast<uint8_t>(0));
+		payload.push_back(static_cast<uint8_t>(0));
+
+		// next four bytes are the timestamp
+		uint32_t timestamp = m_pTimebase->getTime_ms();
+		payload.push_back(static_cast<uint8_t>(timestamp >> 0));
+		payload.push_back(static_cast<uint8_t>(timestamp >> 8));
+		payload.push_back(static_cast<uint8_t>(timestamp >> 16));
+		payload.push_back(static_cast<uint8_t>(timestamp >> 24));
+
+		// next two bytes are the message text length in bytes
+		payload.push_back(static_cast<uint8_t>(logString.size() >> 0));
+		payload.push_back(static_cast<uint8_t>(logString.size() >> 8));
+
+		// and the severity
+		payload.push_back(static_cast<uint8_t>(level));
+
+		// finally we copy in the log message itself
+		payload.insert(payload.end(), logString.begin(),logString.end());
+
+		return true;
 	}
 
+	// this function is not supported, but we need the callback in case we receive the command code
+	// basically the retrieve log message command code is used to send out log messages from the motor
+	// controller, so we do not require/accept the incoming command
 	bool RealLogger::retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
-		if (m_logMessageQueue.empty())
-		{
-			// We send back 2 bytes of 0xFF to signify no log messages are available
-			payload.reserve(2);
-			payload.push_back(0xFF);
-			payload.push_back(0xFF);
-		}
-		else
-		{
-			// payload length is 9 bytes plus the message length
-			payload.reserve(9 + m_logMessageQueue.front().m_message.size());
-
-			// first two bytes are the number of log messages remaining
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.size() - 1) >> 0));
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.size() - 1) >> 8));
-
-			// next four bytes are the timestamp
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_timestamp) >> 0));
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_timestamp) >> 8));
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_timestamp) >> 16));
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_timestamp) >> 24));
-
-			// next two bytes are the message text length in bytes
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_message.size()) >> 0));
-			payload.push_back(static_cast<uint8_t>((m_logMessageQueue.front().m_message.size()) >> 8));
-
-			// and the severity
-			payload.push_back(static_cast<uint8_t>(m_logMessageQueue.front().m_severity));
-
-			// finally we copy in the log message itself
-			payload.insert(payload.end(), m_logMessageQueue.front().m_message.begin(), m_logMessageQueue.front().m_message.end());
-
-			m_logMessageQueue.pop();
-		}
-
-		return true;
+		return false;
 	}
 
 } // namespace Logging

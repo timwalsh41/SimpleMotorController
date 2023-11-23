@@ -38,9 +38,8 @@ private:
 class MockOutputGateway : public IOutputGateway
 {
 public:
-	MOCK_METHOD(void, addLogString, (std::string&), (override));
 	MOCK_METHOD(void, sendMessage, (MessageHandling::Message&), (override));
-	MOCK_METHOD(void, processOutgoingMessages, (), (override));
+	MOCK_METHOD(void, processMessages, (), (override));
 	MOCK_METHOD(uint8_t, processMessage, (), ());
 
 	void DelegateToFake()

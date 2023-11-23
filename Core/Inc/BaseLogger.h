@@ -37,7 +37,6 @@ namespace Logging
 
 		virtual ~BaseLogger() {}
 		virtual void logString(LogLevel level, const std::string& msg) = 0;
-		virtual bool logMessagesPending() = 0;
 		virtual bool retrieveLogMessage(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 	protected:
 		static constexpr std::string_view logLevelString[] = {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"};

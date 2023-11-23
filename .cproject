@@ -89,7 +89,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Src/TestTimebase.cpp|Inc/TestTimebase.cpp|Src/MockMessageHandler.cpp|Test" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry excluding="Src/main.c|Src/TestTimebase.cpp|Inc/TestTimebase.cpp|Src/MockMessageHandler.cpp|Test" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>
 				</configuration>
@@ -193,7 +193,7 @@
 					</fileInfo>
 					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1282820111.474981229" name="SerialParser.cpp" rcbsApplicability="disable" resourcePath="Core/Src/SerialParser.cpp" toolsToInvoke="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.1466253783.1679230428">
 						<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.1466253783.1679230428" name="MCU G++ Compiler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.1466253783">
-							<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols.236181033" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols" valueType="definedSymbols">
+							<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols.236181033" name="Define symbols (-D)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.definedsymbols" valueType="definedSymbols">
 								<listOptionValue builtIn="false" value="USE_HAL_DRIVER"/>
 								<listOptionValue builtIn="false" value="STM32L432xx"/>
 								<listOptionValue builtIn="false" value="SERIAL_ECHO_BACK=0"/>
@@ -202,7 +202,7 @@
 						</tool>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="Src/TestTimebase.cpp|Inc/TestTimebase.cpp|Src/MockMessageHandler.cpp|Test" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry excluding="Src/main.c|Src/TestTimebase.cpp|Inc/TestTimebase.cpp|Src/MockMessageHandler.cpp|Test" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>
 				</configuration>

@@ -13,7 +13,7 @@
 class MockUartWrapper : public IUartWrapper
 {
 public:
-	MOCK_METHOD(void, transmitString, (const std::string&), (const, override));
+	MOCK_METHOD(void, transmitString, (std::string&), (override));
 };
 
 #endif /* INC_MOCKUARTGATEWAY_H_ */

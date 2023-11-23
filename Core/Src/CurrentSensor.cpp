@@ -108,9 +108,10 @@ namespace Sensors
 			return false;
 		}
 
-		// load in number of milliseconds of data to first two bytes of payload
-		payload.push_back(static_cast<uint8_t>((millisecondsOfData >> 8) & 0xFF));
-		payload.push_back(static_cast<uint8_t>(millisecondsOfData & 0xFF));
+		// load in number of samples of float data to first two bytes of payload
+		uint32_t numSamples = millisecondsOfData*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+		payload.push_back(static_cast<uint8_t>((numSamples >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((numSamples >> 8) & 0xFF));
 
 		uint8_t transferBuffer[sizeof(float)];
 
@@ -147,6 +148,78 @@ namespace Sensors
 
 		return true;
 	}
+
+	// calculate and return the mean current over requested time range
+	bool CurrentSensor::getMeanCurrent(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		// motor current request has a two byte payload equal to the number of milliseconds of data to send
+		if (msg.getPayload().size() != 2)
+		{
+			m_pLogger->logString(error, "Invalid payload in getMeanCurrent command");
+			return false;
+		}
+
+		// retrieve the desired number of milliseconds of data from the payload
+		uint16_t millisecondsOfData{0};
+		std::memcpy(&millisecondsOfData, msg.getPayload().data(), 2);
+
+		// TODO: this relies on system tick time being one millisecond
+		int numDataPoints = static_cast<int32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+
+		if (numDataPoints > CURRENT_SENSOR_STORAGE_LENGTH)
+		{
+			// note we're doing integer divide here to get the maximum number of whole number milliseconds
+			// of data we can transmit
+			millisecondsOfData = CURRENT_SENSOR_STORAGE_LENGTH / CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+			numDataPoints = static_cast<uint32_t>(millisecondsOfData)*CURRENT_SENSOR_MEASUREMENTS_PER_TICK;
+		}
+
+		// the required size of the return data is just the size of a float
+		payload.reserve(sizeof(float));
+
+		if (payload.capacity() != sizeof(float))
+		{
+			m_pLogger->logString(error, std::string("Unable to allocate memory for returning motor mean current"));
+			return false;
+		}
+
+		float meanCurrent = 0;
+
+		// To actually copy data into the payload, recall that we are always sending the most recent numDataPoints
+		// points. The most recent point is always at m_storageBufferPtr - 1 (with wrapping for circular buffer). So we
+		// want to get the numDataPoints points prior to m_storageBufferPtr, with wrapping.
+		if ((m_storageBufferPtr - m_storageBuffer.begin()) >= numDataPoints)
+		{
+			for (auto it = m_storageBufferPtr - numDataPoints; it != m_storageBufferPtr; ++it)
+				meanCurrent += *it;
+		}
+		else
+		{
+			// to wrap buffer, we'll first find the number of data points we need from the end of the buffer
+			int valuesAtEndOfBuffer = numDataPoints - (m_storageBufferPtr - m_storageBuffer.begin());
+
+			// grab points at the end and insert into payload
+			for (auto it = m_storageBuffer.end() - valuesAtEndOfBuffer; it != m_storageBuffer.end(); ++it)
+				meanCurrent += *it;
+
+			// now grab the remaining points up to the most recent at the location prior to m_storageBufferPtr
+			for (auto it = m_storageBuffer.begin(); it != m_storageBufferPtr; ++it)
+				meanCurrent += *it;
+		}
+
+		meanCurrent /= numDataPoints;
+
+		uint32_t* p_meanCurrent;
+		p_meanCurrent = reinterpret_cast<uint32_t*>(&meanCurrent);
+
+		payload.push_back(static_cast<uint8_t>((*p_meanCurrent >> 0) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_meanCurrent >> 8) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_meanCurrent >> 16) & 0xFF));
+		payload.push_back(static_cast<uint8_t>((*p_meanCurrent >> 24) & 0xFF));
+
+		return true;
+	}
+
 
 	void CurrentSensor::zeroCurrentSensor()
 	{

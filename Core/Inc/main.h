@@ -86,6 +86,8 @@ void Error_Handler(void);
 #define clearFlag() HAL_GPIO_WritePin(GPIOB, FLAG_Pin, GPIO_PIN_RESET)
 #define toggleFlag() HAL_GPIO_TogglePin(GPIOB, FLAG_Pin)
 
+#define UART_RECEIVE_BUFFER_SIZE 128
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

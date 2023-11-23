@@ -70,6 +70,24 @@ namespace MessageHandling
 		}
 	}
 
+	void SerialParser::ReceiveChars(std::vector<uint8_t>& new_chars)
+	{
+		m_lastCharReceivedTime = m_pTimebase->getTime_ms();
+
+		if ((m_incomingBuffer.size() + new_chars.size()) <= INCOMING_BUFFER_SIZE)
+		{
+			for (auto c : new_chars)
+				m_incomingBuffer.push(c);
+		}
+		else
+		{
+			m_pLogger->logString(error, "Input serial buffer overflow, discarding buffer");
+
+			// clear the incoming buffer queue
+			m_incomingBuffer = {};
+		}
+	}
+
 	void SerialParser::ProcessIncomingData()
 	{
 		uint8_t new_char;
@@ -85,6 +103,7 @@ namespace MessageHandling
 		{
 			if ((m_pTimebase->getTime_ms() - m_lastCharReceivedTime) >= SERIAL_TRANSMISSION_TIMEOUT_TICKS)
 			{
+				logString = "Serial packet timed out before completion, discarding";
 				m_pLogger->logString(warning, "Serial packet timed out before completion, discarding");
 				m_incomingBuffer = {};
 				m_state = IDLE;
@@ -99,9 +118,9 @@ namespace MessageHandling
 			// C++ seems to be happiest when we append a char to a string using
 			// the push_back method
 #ifdef DEBUG
-			logString = "Received new character ";
-			logString.push_back(new_char);
-			m_pLogger->logString(debug, logString);
+			// logString = "Received new character ";
+			// logString.push_back(new_char);
+			// m_pLogger->logString(debug, logString);
 #endif
 
 			switch(m_state)
@@ -120,7 +139,7 @@ namespace MessageHandling
 					{
 						// we have matched the start sequence, move to RECEIVING state
 #ifdef DEBUG
-						m_pLogger->logString(debug, std::string("Received start sequence"));
+						// m_pLogger->logString(debug, std::string("Received start sequence"));
 #endif
 						m_state = RECEIVING;
 						m_startSequenceCandidate.clear();
@@ -148,7 +167,7 @@ namespace MessageHandling
 						m_pMessageHandler->loadIncomingMessage(msg);
 
 #ifdef DEBUG
-						m_pLogger->logString(debug, std::string("Received stop sequence, processing message"));
+						// m_pLogger->logString(debug, std::string("Received stop sequence, processing message"));
 #endif
 
 						// we are finished receiving the current message so return to IDLE
@@ -158,7 +177,8 @@ namespace MessageHandling
 					}
 					stopSequenceCandidate.clear();
 				}
-				else if (m_candidateMessage.size() == MAX_INCOMING_MESSAGE_LENGTH)
+
+				if (m_candidateMessage.size() >= MAX_INCOMING_MESSAGE_LENGTH)
 				{
 					// we have reached the maximum message length without hitting the stop
 					// sequence; discard the message and start over

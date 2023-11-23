@@ -42,6 +42,7 @@ namespace MessageHandling
 		~SerialParser();
 
 		void ReceiveChar(uint8_t new_char);
+		void ReceiveChars(std::vector<uint8_t>& new_chars);
 		void ProcessIncomingData();
 	private:
 		template <typename T>
