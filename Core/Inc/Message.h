@@ -21,9 +21,11 @@ namespace Logging
 
 namespace MessageHandling
 {
+	// CRC length is 16 bits or 2 bytes
+	constexpr uint8_t CRC_LENGTH = 2;
 
 	// minimum payload length is 3 bytes (one byte command code plus two byte CRC)
-	constexpr uint8_t MINIMUM_MESSAGE_LENGTH = 3;
+	constexpr uint8_t MINIMUM_MESSAGE_LENGTH = 1 + CRC_LENGTH;
 
 	// bit mask for acknowledge bit in command code
 	constexpr uint8_t ACK_BIT_MASK = 0x80;

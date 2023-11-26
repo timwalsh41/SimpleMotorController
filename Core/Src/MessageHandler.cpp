@@ -136,6 +136,10 @@ void MessageHandler::buildCommandMap()
 			{
 				return m_pMotorCommandHandler->getMotorPosition(msg, payload);
 			};
+	m_commandMap[CMD_GET_MOTOR_PWM] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->getMotorPwm(msg, payload);
+				};
 	m_commandMap[CMD_GET_MOTOR_SPEED] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				return m_pMotorCommandHandler->getMotorSpeed(msg, payload);

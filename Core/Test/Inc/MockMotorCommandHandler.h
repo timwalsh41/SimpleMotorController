@@ -22,6 +22,7 @@ namespace MotorControl
 		MOCK_METHOD(bool, sleepDriver, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 		MOCK_METHOD(bool, wakeDriver, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 		MOCK_METHOD(bool, getMotorPosition, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
+		MOCK_METHOD(bool, getMotorPwm, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 		MOCK_METHOD(bool, getMotorSpeed, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 		MOCK_METHOD(bool, getMotorDirection, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));
 		MOCK_METHOD(bool, rampMotorOn, (const MessageHandling::Message&, std::vector<uint8_t>&), (override));

@@ -4,6 +4,9 @@ import MotorCommanderDataClasses
 import logging
 import struct
 import time
+import signal
+import sys
+from InfiniteTimer.InfiniteTimer import InfiniteTimer
 import numpy as np
 from datetime import datetime
 from collections import deque
@@ -19,11 +22,24 @@ CURRENT_DATA_MS = 50
 # see CurrentSensor.h
 CURRENT_SENSOR_MEASUREMENTS_PER_MS = 20
 
+# use daemonize=True to have the MotorCommander object run the tick in the background
+# at a 10 Hz rate
 class MotorCommander:
-    def __init__(self, port):
+    def __init__(self, port, daemonize=False, tickTime_s=0.1):
+        if type(tickTime_s) not in (int, float):
+            raise TypeError('tickTime_s must be a numeric value greater than zero')
+        
+        if tickTime_s <= 0:
+            raise TypeError('tickTime_s must be a numeric value greater than zero')
+        
+        if type(daemonize) is not bool:
+            raise TypeError('daemonize must be true or false')
+
         self._messageQueue = deque()
         self._commandLabelMap = {}
         self._messageBytes = bytearray()
+
+        self._daemonize = daemonize
 
         self._driverStatus = MotorCommanderDataClasses.DriverStatus()
         self._motorStatus = MotorCommanderDataClasses.MotorStatus()
@@ -40,34 +56,58 @@ class MotorCommander:
         if not self._motorDriver.isConnected():
             raise MotorCommanderException(f'Unable to open motor driver on {port}')
 
-        # get version
-        # self.requestVersion()
-        # returnMessage = Message()
-        # if not self._sendMessageAndGetResponse(self._messageQueue.pop(), returnMessage):
-        #     raise MotorCommanderException('Invalid response from motor driver when reading version')
-        # self._parseResponse(returnMessage)
+        # read and throw away any build up data
+        self._motorDriver.readBytes()
+
+        # get version - this will print results below from the main tick loop
+        self.requestVersion()
+
+        if self._daemonize:
+            self._tickTimer = InfiniteTimer(tickTime_s, self.tick)
+            self._tickTimer.start()
+            signal.signal(signal.SIGINT, self._sigintHandler)
+            
+
+    def _sigintHandler(self, sig, frame):
+        self._tickTimer.cancel()
+        self._logger.fatal('Received SIGINT, terminating')
+        sys.exit(0)
+
+
+    def stop(self):
+        if self._daemonize:
+            self._tickTimer.cancel()
 
 
     def _initializeLogging(self):
         self._rootLogger = logging.getLogger()
         self._rootLogger.setLevel(logging.DEBUG)
 
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        self._streamHandler = logging.StreamHandler()
+        self._streamHandler.setLevel(logging.DEBUG)
+        self._streamHandler.terminator = '\r\n'
         formatter = logging.Formatter('%(asctime)-20s : %(name)-15s : %(levelname)-8s : %(message)s')
-        handler.setFormatter(formatter)
+        self._streamHandler.setFormatter(formatter)
 
         current_datetime = datetime.now().strftime("%Y%m%d-%H%M%S")
         file_handler = logging.FileHandler(f'MotorCommander-{current_datetime}.log')
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
-        self._rootLogger.addHandler(handler)
+        self._rootLogger.addHandler(self._streamHandler)
         self._rootLogger.addHandler(file_handler)
 
         # create a named logger so the MotorCommander log lines are readable and not just
         # tagged with "root"
         self._logger = logging.getLogger(__name__)
+
+
+    def _sendMessageAndReadResponse(self):
+        if len(self._messageQueue) > 0:
+            self._motorDriver.sendBytes(self._messageQueue.popleft().to_byte_array())
+            
+        # read any available response from the driver
+        return self._motorDriver.readBytes()
 
 
     def tick(self):
@@ -83,11 +123,8 @@ class MotorCommander:
 
         while continueFlag:
             # send messages in queue            
-            if len(self._messageQueue) > 0:
-                self._motorDriver.sendBytes(self._messageQueue.popleft().to_byte_array())
-                
-            # read any available response from the driver
-            response = self._motorDriver.readBytes()
+            response = self._sendMessageAndReadResponse()
+
             if len(response) == 0:
                 # if we're not getting responses, then assume we can stop
                 # (this is overrided below if there are more messages to transmit)
@@ -172,7 +209,7 @@ class MotorCommander:
             # completed successfully
             self._logger.info(f'Command {self._commandLabelMap[commandCode]} completed successfully')            
         else:
-            raise MotorCommanderException('No handler set up to parse response for command code 0x{commandCode:x}')
+            self._logger.error('No handler set up to parse response for command code 0x{commandCode:x}')
 
 
     def requestVersion(self):
@@ -185,9 +222,9 @@ class MotorCommander:
 
     def _parseVersion(self, msg: Message):
         if len(msg.payload) != 4:
-            raise ValueError('Invalid payload in version message')
+            self._logger.error(f'Invalid payload in version message (length = {len(msg.payload)})')
         
-        self._logger.info(f'Motor driver version {msg.payload[0]}.{msg.payload[1]}.{msg.payload[2]}')
+        self._logger.info(f'Motor driver version {msg.payload[1]}.{msg.payload[2]}.{msg.payload[3]}')
     
     
     def enableMotor(self):
@@ -277,10 +314,10 @@ class MotorCommander:
 
 
     def rampMotorOn(self, driveLevel: int, rampTime_ms: int, forwardDirection: bool):
-        if type(driveLevel) != int:
-            raise TypeError('Drive level must be an integer between 0 and 1000 (100%)')
+        if type(driveLevel) not in (int, float):
+            raise TypeError('Drive level must be a number between 0 and 1000 (100%)')
         if driveLevel < 0 or driveLevel > 1000:
-            raise ValueError('Drive level must be an integer between 0 and 1000 (100%)')
+            raise ValueError('Drive level must be a number between 0 and 1000 (100%)')
         
         if type(rampTime_ms) != int:
             raise TypeError('Ramp time (ms) must be an integer of at least 25')
@@ -293,7 +330,7 @@ class MotorCommander:
         msg = Message()
         msg.command_code = CommandInterface.CMD_RAMP_MOTOR_ON
 
-        msg.payload = struct.pack('H', driveLevel)
+        msg.payload = struct.pack('H', int(driveLevel))
         msg.payload += bytes([1]) if forwardDirection else bytes([0])
         msg.payload += struct.pack('H', rampTime_ms)
 
@@ -448,7 +485,7 @@ class MotorCommander:
         driverState = MotorCommanderDataClasses.MotorControlState(self._driverStatus.ControllerState)
         
         self._logger.info('Motor driver status:')
-        self._logger.info(f'\tState:{MotorCommanderDataClasses.MotorStatusLabel[driverState]}')
+        self._logger.info(f'\tState: {MotorCommanderDataClasses.MotorStatusLabel[driverState]}')
         self._logger.info(f'\tDirection: {"forward" if self._driverStatus.ForwardDirection else "reverse"}')
         self._logger.info(f'\tSleeping: {self._driverStatus.IsSleeping}')
         self._logger.info(f'\tFaulted: {self._driverStatus.IsFaulted}')
@@ -461,37 +498,46 @@ class MotorCommander:
 
     
     def _buildCommandLabelMap(self):
-        self._commandLabelMap[CommandInterface.ACK_SUCCESSFUL] = "Command executed successfully"
-        self._commandLabelMap[CommandInterface.ACK_INVALID_CRC] = "Command failure; invalid CRC"
-        self._commandLabelMap[CommandInterface.ACK_INVALID_COMMAND] = "Command failure: invalid command code"
-        self._commandLabelMap[CommandInterface.ACK_COMMAND_ERROR] = "Command failure: error processing command"
+        self._commandLabelMap[CommandInterface.ACK_SUCCESSFUL] = "command executed successfully"
+        self._commandLabelMap[CommandInterface.ACK_INVALID_CRC] = "command failure; invalid CRC"
+        self._commandLabelMap[CommandInterface.ACK_INVALID_COMMAND] = "command failure: invalid command code"
+        self._commandLabelMap[CommandInterface.ACK_COMMAND_ERROR] = "command failure: error processing command"
 
-        self._commandLabelMap[CommandInterface.CMD_ENABLE_MOTOR] = "Enable motor"
-        self._commandLabelMap[CommandInterface.CMD_DISABLE_MOTOR] = "Disable motor"
-        self._commandLabelMap[CommandInterface.CMD_SLEEP_DRIVER] = "Sleep motor"
-        self._commandLabelMap[CommandInterface.CMD_WAKE_DRIVER] = "Wake motor"
-        self._commandLabelMap[CommandInterface.CMD_CLEAR_FAULT] = "Clear fault"
+        self._commandLabelMap[CommandInterface.CMD_ENABLE_MOTOR] = "enable motor"
+        self._commandLabelMap[CommandInterface.CMD_DISABLE_MOTOR] = "disable motor"
+        self._commandLabelMap[CommandInterface.CMD_SLEEP_DRIVER] = "sleep motor"
+        self._commandLabelMap[CommandInterface.CMD_WAKE_DRIVER] = "wake motor"
+        self._commandLabelMap[CommandInterface.CMD_CLEAR_FAULT] = "clear fault"
 
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_POS] = "Get motor position"
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_PWM] = "Get motor PWM"
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_SPEED] = "Get motor speed"
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_DIR] = "Get motor direction"
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_CURRENT] = "Get motor current"
-        self._commandLabelMap[CommandInterface.CMD_GET_MEAN_CURRENT] = "Get mean current"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_POS] = "get motor position"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_PWM] = "get motor PWM"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_SPEED] = "get motor speed"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_DIR] = "get motor direction"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_CURRENT] = "get motor current"
+        self._commandLabelMap[CommandInterface.CMD_GET_MEAN_CURRENT] = "get mean current"
         
-        self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_ON] = "Ramp motor on"
-        self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_OFF] = "Ramp motor off"
-        self._commandLabelMap[CommandInterface.CMD_SET_MAX_DC] = "Set maximum DC"
+        self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_ON] = "ramp motor on"
+        self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_OFF] = "ramp motor off"
+        self._commandLabelMap[CommandInterface.CMD_SET_MAX_DC] = "set maximum DC"
 
-        self._commandLabelMap[CommandInterface.CMD_INJECT_FAULT] = "Inject fault"
-        self._commandLabelMap[CommandInterface.CMD_GET_VERSION] = "Get driver version"
-        self._commandLabelMap[CommandInterface.CMD_GET_STATUS] = "Get driver status"
-        self._commandLabelMap[CommandInterface.CMD_GET_LOG_MESSAGE] = "Get log message"
+        self._commandLabelMap[CommandInterface.CMD_INJECT_FAULT] = "inject fault"
+        self._commandLabelMap[CommandInterface.CMD_GET_VERSION] = "get driver version"
+        self._commandLabelMap[CommandInterface.CMD_GET_STATUS] = "get driver status"
+        self._commandLabelMap[CommandInterface.CMD_GET_LOG_MESSAGE] = "get log message"
 
 
     def getDriverStatus(self):
         return self._driverStatus
 
+
+    def setStreamLogLevelInfo(self):
+        self._streamHandler.setLevel(logging.INFO)
+        self._logger.info('Setting stream log level to INFO')
+
+    
+    def setStreamLogLevelDebug(self):
+        self._streamHandler.setLevel(logging.DEBUG)
+        self._logger.info('Setting stream log level to DEBUG')
 
 class MotorCommanderException(Exception):
     pass

@@ -22,6 +22,7 @@ namespace MotorControl
 		virtual bool sleepDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 		virtual bool wakeDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 		virtual bool getMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
+		virtual bool getMotorPwm(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 		virtual bool getMotorSpeed(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 		virtual bool getMotorDirection(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;
 		virtual bool rampMotorOn(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) = 0;

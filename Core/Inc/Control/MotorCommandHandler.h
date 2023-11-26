@@ -25,6 +25,7 @@ public:
 	bool sleepDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool wakeDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
+	bool getMotorPwm(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorSpeed(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorDirection(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool rampMotorOn(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;

@@ -36,7 +36,6 @@ namespace MotorControl
 			// nextState = m_state->handleEvent(MotorEvent{CLEAR_FAULT, nullMotorCommand});
 			__asm__("nop");
 		else if (m_pMotorDriver->isDriverFaulted())
-			// TODO: Could move fault detection to interrupt
 			nextState = m_state->handleEvent(MotorEvent{MOTOR_FAULT, nullMotorCommand});
 		else
 			nextState = m_state->handleEvent(MotorEvent{TICK, nullMotorCommand});

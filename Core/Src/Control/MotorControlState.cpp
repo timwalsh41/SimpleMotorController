@@ -66,6 +66,7 @@ namespace MotorControl
 				case TICK:
 				case DISABLE_MOTOR:
 				case WAKE:
+				case MOTOR_FAULT:
 				case CLEAR_FAULT:
 				case MOTOR_COMMAND:
 					// do nothing
@@ -74,10 +75,6 @@ namespace MotorControl
 				case ENABLE_MOTOR:
 					// enter idle state, where motor driver will be enabled
 					return std::make_unique<Idle>(m_pMotorDriver, m_pLogger);
-
-				case MOTOR_FAULT:
-					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case SLEEP:
 					// enter sleep state, where motor will be disabled and driver put in sleep mode
@@ -202,16 +199,13 @@ namespace MotorControl
 				case DISABLE_MOTOR:
 				case ENABLE_MOTOR:
 				case SLEEP:
+				case MOTOR_FAULT:
 				case CLEAR_FAULT:
 					// do nothing
 					return nullptr;
 
 				case MOTOR_COMMAND:
 					return nullptr;
-
-				case MOTOR_FAULT:
-					// enter fault state, where motor will be stopped and disabled
-					return std::make_unique<Fault>(m_pMotorDriver, m_pLogger);
 
 				case WAKE:
 					m_pLogger->logString(info, "Received wake event, waking motor driver");
@@ -399,7 +393,7 @@ namespace MotorControl
 							}
 						}
 
-						m_pLogger->logString(info, std::string("Updating PWM duty cycle to ") + std::to_string(newDutyCycle));
+						m_pLogger->logString(debug, std::string("Updating PWM duty cycle to ") + std::to_string(newDutyCycle));
 						m_pMotorDriver->setPwmDutyCycle(static_cast<int32_t>(newDutyCycle));
 					}
 

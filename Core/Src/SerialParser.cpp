@@ -20,6 +20,8 @@ namespace MessageHandling
 		if (refSequenceLength != compSequence.size())
 		{
 			m_pLogger->logString(warning, "sequenceMatch: size mismatch between reference sequence and candidate sequence");
+			// builtin trap will force a hard fault, allowing us to debug the issue
+			// __builtin_trap();
 			return false;
 		}
 
@@ -158,7 +160,9 @@ namespace MessageHandling
 
 				if (m_candidateMessage.size() >= STOP_SEQUENCE_LENGTH)
 				{
-					stopSequenceCandidate.insert(stopSequenceCandidate.end(), m_candidateMessage.end()-4, m_candidateMessage.end());
+					// We will pick off the end of the candidate message and check it against the stop sequence
+					stopSequenceCandidate.clear();
+					stopSequenceCandidate.insert(stopSequenceCandidate.end(), m_candidateMessage.end()-STOP_SEQUENCE_LENGTH, m_candidateMessage.end());
 					if (sequenceMatch(STOP_SEQUENCE, stopSequenceCandidate, STOP_SEQUENCE_LENGTH))
 					{
 						// we have received the stop sequence, message is complete
@@ -175,7 +179,6 @@ namespace MessageHandling
 						m_candidateMessage.clear();
 						break;
 					}
-					stopSequenceCandidate.clear();
 				}
 
 				if (m_candidateMessage.size() >= MAX_INCOMING_MESSAGE_LENGTH)

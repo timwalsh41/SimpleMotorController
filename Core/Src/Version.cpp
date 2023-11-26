@@ -8,7 +8,6 @@
 #include "Version.h"
 #include "BaseLogger.h"
 #include "SingletonFactory.h"
-#include "CommandInterface.h"
 #include <memory>
 
 namespace Utility
@@ -25,8 +24,6 @@ namespace Utility
 			pLogger->logString(error, std::string("Invalid payload in get version command"));
 			return false;
 		}
-
-		returnData.push_back(ACK_SUCCESSFUL);
 		returnData.push_back(MAJOR_VERSION);
 		returnData.push_back(MINOR_VERSION);
 		returnData.push_back(BUILD);

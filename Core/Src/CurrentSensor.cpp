@@ -52,6 +52,7 @@ namespace Sensors
 				if (++m_storageBufferPtr == m_storageBuffer.end())
 					m_storageBufferPtr = m_storageBuffer.begin();
 			}
+			m_bBufferReady = false;
 		}
 	}
 

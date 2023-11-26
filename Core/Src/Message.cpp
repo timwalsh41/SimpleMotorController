@@ -64,6 +64,9 @@ namespace MessageHandling
 		}
 
 		m_commandCode = raw_message[0];
+
+		// minimum message length includes the command code plus the CRC, so the payload length is just the
+		// total message size minus (command code length + payload length + ignore length)
 		payloadLength = raw_message.size() - MINIMUM_MESSAGE_LENGTH - ignoreLength;
 
 		if (payloadLength > 0)
@@ -72,12 +75,12 @@ namespace MessageHandling
 			// copy in payload, which runs from the second byte (the one after the command code) to the end minus
 			// the ignore length (stop sequence length) plus minimum message length (CRC + command code) minus one
 			// byte for command code
-			m_payload.insert(m_payload.begin(), raw_message.begin() + 1, raw_message.end() - ignoreLength - MINIMUM_MESSAGE_LENGTH + 1);
+			m_payload.insert(m_payload.begin(), raw_message.begin() + 1, raw_message.end() - ignoreLength - (MINIMUM_MESSAGE_LENGTH - 1));
 		}
 
 		// TODO: make sure endianness is correct here
 		// Now grab the CRCC
-		std::memcpy(&m_crc, &raw_message.data()[raw_message.size() - ignoreLength - 2], 2);
+		std::memcpy(&m_crc, &raw_message.data()[raw_message.size() - ignoreLength - CRC_LENGTH], CRC_LENGTH);
 		return true;
 	}
 

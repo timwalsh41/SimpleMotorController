@@ -42,7 +42,7 @@ namespace MotorControl
 		void setMaxDutyCycle(uint16_t maxDutyCycle_pct) override;
 		uint16_t getMaxDutyCycle() const override;
 
-		int32_t getEncoderCounts() const override{ return m_encoderCount; }
+		int32_t getEncoderCounts() const override { return m_encoderCount; }
 		float getShaftRotationCount() const override;
 
 		void zeroEncoder();

@@ -65,6 +65,9 @@ void Error_Handler(void);
 #define VCP_TX_GPIO_Port GPIOA
 #define DIR_Pin GPIO_PIN_0
 #define DIR_GPIO_Port GPIOB
+#define FLT__Pin GPIO_PIN_1
+#define FLT__GPIO_Port GPIOB
+#define FLT__EXTI_IRQn EXTI1_IRQn
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14
@@ -77,16 +80,16 @@ void Error_Handler(void);
 #define SLP__GPIO_Port GPIOB
 #define FLAG_Pin GPIO_PIN_5
 #define FLAG_GPIO_Port GPIOB
-#define FLT__Pin GPIO_PIN_7
-#define FLT__GPIO_Port GPIOB
-#define FLT__EXTI_IRQn EXTI9_5_IRQn
 
 /* USER CODE BEGIN Private defines */
 #define setFlag() HAL_GPIO_WritePin(GPIOB, FLAG_Pin, GPIO_PIN_SET)
 #define clearFlag() HAL_GPIO_WritePin(GPIOB, FLAG_Pin, GPIO_PIN_RESET)
 #define toggleFlag() HAL_GPIO_TogglePin(GPIOB, FLAG_Pin)
 
-#define UART_RECEIVE_BUFFER_SIZE 128
+
+// select buffer size so that we don't overflow during a single main loop iteration
+// 1 ms loop, 921600 baud = 922 bytes per iteration
+#define UART_RECEIVE_BUFFER_SIZE 1024
 
 /* USER CODE END Private defines */
 

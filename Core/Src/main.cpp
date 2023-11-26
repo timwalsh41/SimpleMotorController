@@ -75,11 +75,8 @@ constexpr uint32_t HEARTBEAT_TIME_MS = 5000;
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
-I2C_HandleTypeDef hi2c1;
-
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
-TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
@@ -96,10 +93,8 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
-static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 static void processUartDma();
 /* USER CODE END PFP */
@@ -176,20 +171,25 @@ int main(void)
   MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_TIM1_Init();
-  MX_I2C1_Init();
   MX_TIM2_Init();
   MX_ADC1_Init();
-  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
+  // now start TIM2 for PWM generation and ADC triggering
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+
   // start ADC acquisitions
-  HAL_TIM_Base_Start(&htim6);
   HAL_ADC_Start_DMA(&hadc1, pCurrentSensor->getCurrentBuffer(), Sensors::CURRENT_SENSOR_BUFFER_SIZE);
 
+  // set the UART in receive mode (with DMA)
   HAL_UART_Receive_DMA(&huart2, UartRcvBuffer, UART_RECEIVE_BUFFER_SIZE);
 
+  // start TIM1 in quadrature encoder mode
   if (HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_ALL) != HAL_OK)
   		Error_Handler();
+
+  // apply offset to zero encoder mid-range
   theMotorDriver.zeroEncoder();
 
 #ifdef DEBUG
@@ -218,6 +218,7 @@ int main(void)
 
 	if ((HAL_GetTick() - mainLoopTimer) >= MAIN_LOOP_TIME_MS)
 	{
+		// Main loop tasks
 		processUartDma();
 		pSerialParser->ProcessIncomingData();
 		theMessageHandler.processMessages();
@@ -226,10 +227,6 @@ int main(void)
 		pController->tick();
 
 		mainLoopTimer = HAL_GetTick();
-
-		setFlag();
-		Utility::delayCycles(1000);
-		clearFlag();
 	}
 
 	if (Utility::timeElapsed(ledTimer, HAL_GetTick()) >= LED_BLINK_TIME_MS)
@@ -335,11 +332,11 @@ static void MX_ADC1_Init(void)
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.NbrOfConversion = 12;
+  hadc1.Init.NbrOfConversion = 5;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T6_TRGO;
+  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.OversamplingMode = DISABLE;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -351,7 +348,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_12;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
@@ -391,113 +388,9 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_6;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_7;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_8;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_9;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_10;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_11;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_12;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x10909CEC;
-  hi2c1.Init.OwnAddress1 = 208;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Analogue filter
-  */
-  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Digital filter
-  */
-  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
 
 }
 
@@ -522,7 +415,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 24576;
+  htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -590,7 +483,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC2REF;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
@@ -604,48 +497,16 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM2;
+  sConfigOC.Pulse = 10;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
-
-}
-
-/**
-  * @brief TIM6 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM6_Init(void)
-{
-
-  /* USER CODE BEGIN TIM6_Init 0 */
-
-  /* USER CODE END TIM6_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM6_Init 1 */
-
-  /* USER CODE END TIM6_Init 1 */
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 0;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 16;
-  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM6_Init 2 */
-
-  /* USER CODE END TIM6_Init 2 */
 
 }
 
@@ -693,6 +554,9 @@ static void MX_DMA_Init(void)
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
 /**
@@ -728,8 +592,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(FLT__GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -758,6 +622,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   SingletonFactory factory;
   auto pCurrentSensor = factory.retrieve<CurrentSensor>();
 
+  HAL_ADC_Stop_DMA(&hadc1);
+
   // hand off current sensor buffer
   pCurrentSensor->swapBuffer();
 
@@ -770,7 +636,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	SingletonFactory factory;
 	auto pController = factory.retrieve<Controller>();
 
-	// TODO: test that this actually works
 	if (GPIO_Pin == FLT__Pin)
 		if (HAL_GPIO_ReadPin(FLT__GPIO_Port, FLT__Pin) == GPIO_PIN_RESET)
 			pController->injectFault();
@@ -782,13 +647,20 @@ void processUartDma()
 	auto pSerialParser = factory.retrieve<SerialParser>();
 	std::vector<uint8_t> newChars{};
 
-	// atomic operation - we'll pause the DMA transfer while we grab the
-	// available bytes
-	__disable_irq();
-	HAL_UART_DMAPause(&huart2);
+	// Note - I had this as an atomic operation (disabling interrupts and pausing the UART/DMA transfer
+	// However this was leading to missed bytes - at a baud rate of 921,600, we get a byte almost every
+	// microsecond, so if a transmission arrives during this operation we will quickly fill the HW UART
+	// buffer and start losing data. Once I removed the disable IRQ and DMA pause, transmission was much
+	// more reliable. Checking timing using the GPIO flag, this would take about 16 us when I caught an
+	// instance that involved a DMA read while running with MotorCommander script (sends a few commands
+	// every tick to get status and sensor values).
+
+	// __disable_irq();
+	// HAL_UART_DMAPause(&huart2);
 	int32_t new_pos = UART_RECEIVE_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(huart2.hdmarx);
 
-	if (new_pos != UartDmaIdx) { // New data has arrived
+	if (new_pos != UartDmaIdx) { // New data has arrived; potential bug here if exactly UART_RECEIVE_BUFFER_SIZE
+								 // bytes arrive
 		if (new_pos > UartDmaIdx) { // No overflow
 			// Process data from buffer[old_pos] to buffer[new_pos-1]
 			newChars.insert(newChars.end(), &UartRcvBuffer[UartDmaIdx], &UartRcvBuffer[new_pos]);
@@ -804,8 +676,8 @@ void processUartDma()
 		pSerialParser->ReceiveChars(newChars);
 	}
 
-	HAL_UART_DMAResume(&huart2);
-	__enable_irq();
+	// HAL_UART_DMAResume(&huart2);
+	// __enable_irq();
 	// end atomic operation
 }
 

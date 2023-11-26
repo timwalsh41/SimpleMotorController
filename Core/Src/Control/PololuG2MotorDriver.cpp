@@ -34,7 +34,7 @@ namespace MotorControl
 
 	void PololuG2MotorDriver::setPwmDutyCycle(int32_t dutyCycle)
 	{
-		// duty cycle is provided/stored as tenths of a percent of maximum
+		// duty cycle is provided/stored as tenths of a percent of the limit, capped to max percent of limit
 		m_dutyCycle = std::clamp(dutyCycle, static_cast<int32_t>(0), m_maxDutyCycle);
 	}
 
@@ -46,30 +46,28 @@ namespace MotorControl
 
 	void PololuG2MotorDriver::setMaxDutyCycle(uint16_t maxDutyCycle_pct)
 	{
-		// max duty cycle is provided in tenths of a percent, and we will clamp here to the minimum limit for this
-		// setting, and 100%
+		// max duty cycle is the maximum percent of the limit
 		m_maxDutyCycle = std::clamp(static_cast<int>(maxDutyCycle_pct), static_cast<int>(DUTY_CYCLE_MAX_MIN_LIMIT), 1000);
 	}
 
 	uint16_t PololuG2MotorDriver::getMaxDutyCycle() const
 	{
-		// we store duty cycle in timer ticks, we need to convert here to tenths of a percent of the max duty cycle limit
 		return static_cast<uint16_t>(m_maxDutyCycle);
 	}
 
 	void PololuG2MotorDriver::updateEncoder()
 	{
-		m_encoderCount = static_cast<int32_t>(TIM1->CNT) - ENCODER_ZERO_COUNT;
+		m_encoderCount = static_cast<int32_t>(TIM1->CNT) - static_cast<int32_t>(ENCODER_ZERO_COUNT);
 	}
 
 	// reset the encoder to the mid-scale zero value
 	void PololuG2MotorDriver::zeroEncoder()
 	{
 		// initialize the encoder counter to this offset value to avoid rolling this over
-		TIM1->CNT = static_cast<uint32_t>(ENCODER_ZERO_COUNT);
+		TIM1->CNT = ENCODER_ZERO_COUNT;
 	}
 
-	// write drive configuratino out to motor driver
+	// write drive configuration out to motor driver
 	void PololuG2MotorDriver::updateMotorDrive()
 	{
 		if (m_isSleeping)
@@ -106,6 +104,7 @@ namespace MotorControl
 	// no input checking here on this private function
 	void PololuG2MotorDriver::setHwDutyCycle(int32_t dutyCycle)
 	{
+		// write the duty cycle directly to the channel 1 CCR register
 		TIM2->CCR1 = dutyCycle;
 	}
 

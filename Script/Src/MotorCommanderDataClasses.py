@@ -30,7 +30,7 @@ class DriverStatus:
     IsFaulted: bool
     IsSleeping: bool
     IsLogMessageAvailable: bool
-    DriveLevel: float
+    DriveLevel: int
     TimeInState_ms: int
 
     def __init__(self, payload: bytearray = None):
