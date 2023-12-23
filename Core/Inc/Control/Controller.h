@@ -35,9 +35,13 @@ namespace MotorControl
 		void sendCommand(bool forwardDirection, uint16_t dutyCycle, uint16_t rampTimeMs);
 		void idleMotor();
 
-		bool getMotorDirection() const;
-		int32_t getMotorPosition() const;
-		uint16_t getMotorPwmLevel() const;
+		bool getMotorDirection() const { return m_pMotorDriver->getForwardDirection(); }
+		int32_t getMotorPosition() const { return m_pMotorDriver->getEncoderCounts(); }
+		float getMotorRotation() const { return m_pMotorDriver->getShaftRotationCount(); }
+		uint16_t getMotorPwmLevel() const { return static_cast<uint16_t>(m_pMotorDriver->getPwmDutyCycle()); }
+
+		void zeroMotorEncoder() const { m_pMotorDriver->zeroEncoder(); }
+		void zeroMotorRotation() const { m_pMotorDriver->zeroRotationCount(); }
 
 		void setMaxDutyCycle(uint16_t maxDutyCycle) { m_pMotorDriver->setMaxDutyCycle(maxDutyCycle); }
 		uint16_t getMaxDutyCycle() const { return m_pMotorDriver->getMaxDutyCycle(); }

@@ -14,6 +14,7 @@ namespace MotorControl
 
 	PololuG2MotorDriver::PololuG2MotorDriver() {
 		zeroEncoder();
+		zeroRotationCount();
 	}
 
 	void PololuG2MotorDriver::disableMotor()
@@ -57,6 +58,21 @@ namespace MotorControl
 
 	void PololuG2MotorDriver::updateEncoder()
 	{
+		// maintain encoder count within two rotations of zero position
+		while (TIM1->CNT > (ENCODER_ZERO_COUNT + 2*ENCODER_PULSES_PER_SHAFT_REVOLUTION))
+		{
+			// shift encoder count down by one revolution, and increment rotation count
+			TIM1->CNT -= ENCODER_PULSES_PER_SHAFT_REVOLUTION;
+			m_rotationCount += 1;
+		}
+
+		while (TIM1->CNT < (ENCODER_ZERO_COUNT - 2*ENCODER_PULSES_PER_SHAFT_REVOLUTION))
+		{
+			// shift encoder count up by one revolution, and decrement rotation count
+			TIM1->CNT += ENCODER_PULSES_PER_SHAFT_REVOLUTION;
+			m_rotationCount -= 1;
+		}
+
 		m_encoderCount = static_cast<int32_t>(TIM1->CNT) - static_cast<int32_t>(ENCODER_ZERO_COUNT);
 	}
 
@@ -65,6 +81,13 @@ namespace MotorControl
 	{
 		// initialize the encoder counter to this offset value to avoid rolling this over
 		TIM1->CNT = ENCODER_ZERO_COUNT;
+	}
+
+	// clear the output shaft rotation counter
+	void PololuG2MotorDriver::zeroRotationCount()
+	{
+		zeroEncoder();
+		m_rotationCount = 0;
 	}
 
 	// write drive configuration out to motor driver
@@ -116,7 +139,7 @@ namespace MotorControl
 	// return the encoder position in rotations of the output shaft from the zero position
 	float PololuG2MotorDriver::getShaftRotationCount() const
 	{
-		return static_cast<float>(m_encoderCount)/ENCODER_PULSES_PER_SHAFT_REVOLUTION;
+		return static_cast<float>(m_rotationCount) + static_cast<float>(m_encoderCount)/ENCODER_PULSES_PER_SHAFT_REVOLUTION;
 	}
 
 } /* namespace MotorControl */

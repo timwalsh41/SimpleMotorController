@@ -63,9 +63,10 @@ class DriverStatus:
 
 @dataclass
 class MotorStatus:
-    Position: float
-    Speed: float
-    Current: float
+    Position: float     # raw encoder position value
+    Speed: float        # motor speed, in encoder counts per system tick
+    Current: float      # motor current, AU
+    Rotation: float     # motor rotational position (rotations of output shaft)
 
     def __init__(self, position = None, speed = None, current = None):
         if position is None:

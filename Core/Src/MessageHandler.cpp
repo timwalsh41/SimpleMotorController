@@ -132,10 +132,14 @@ void MessageHandler::buildCommandMap()
 				{
 					return m_pMotorCommandHandler->clearFault(msg, payload);
 				};
-	m_commandMap[CMD_GET_MOTOR_POS] = [this](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_GET_MOTOR_POSITION] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				return m_pMotorCommandHandler->getMotorPosition(msg, payload);
 			};
+	m_commandMap[CMD_GET_MOTOR_ROTATION] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->getMotorRotation(msg, payload);
+				};
 	m_commandMap[CMD_GET_MOTOR_PWM] = [this](const Message& msg, std::vector<uint8_t>& payload)
 				{
 					return m_pMotorCommandHandler->getMotorPwm(msg, payload);
@@ -156,10 +160,22 @@ void MessageHandler::buildCommandMap()
 				{
 					return m_pCurrentSensor->getMeanCurrent(msg, payload);
 				};
-	m_commandMap[CMD_RAMP_MOTOR_ON] = [this](const Message& msg, std::vector<uint8_t>& payload)
+	m_commandMap[CMD_ZERO_MOTOR_POSITION] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->zeroMotorPosition(msg, payload);
+				};
+	m_commandMap[CMD_ZERO_MOTOR_ROTATION] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->zeroMotorRotation(msg, payload);
+				};
+	m_commandMap[CMD_ZERO_MOTOR_CURRENT] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
-				return m_pMotorCommandHandler->rampMotorOn(msg, payload);
+				return m_pCurrentSensor->zeroCurrentSensor(msg, payload);
 			};
+	m_commandMap[CMD_RAMP_MOTOR_ON] = [this](const Message& msg, std::vector<uint8_t>& payload)
+				{
+					return m_pMotorCommandHandler->rampMotorOn(msg, payload);
+				};
 	m_commandMap[CMD_RAMP_MOTOR_OFF] = [this](const Message& msg, std::vector<uint8_t>& payload)
 			{
 				return m_pMotorCommandHandler->rampMotorOff(msg, payload);

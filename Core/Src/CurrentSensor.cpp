@@ -9,6 +9,7 @@
 #include "SingletonFactory.h"
 #include <cstring>
 #include <algorithm>
+#include <numeric>
 
 namespace Sensors
 {
@@ -46,8 +47,7 @@ namespace Sensors
 					sum += pBuffer[i+j];
 				}
 
-				*m_storageBufferPtr = (sum / CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT - CURRENT_SENSOR_ZERO_OFFSET) *
-														 ADC_TO_MA;
+				*m_storageBufferPtr = sum/CURRENT_SENSOR_SAMPLES_PER_MEASUREMENT*ADC_TO_MA - m_zeroCurrentOffset;
 
 				if (++m_storageBufferPtr == m_storageBuffer.end())
 					m_storageBufferPtr = m_storageBuffer.begin();
@@ -221,17 +221,29 @@ namespace Sensors
 		return true;
 	}
 
+	bool CurrentSensor::zeroCurrentSensor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		if (msg.getPayload().size() > 0)
+		{
+			m_pLogger->logString(error, "Invalid payload in zeroCurrentSensor command");
+			return false;
+		}
+
+		zeroCurrentSensor();
+
+		return true;
+	}
 
 	void CurrentSensor::zeroCurrentSensor()
 	{
-		// TODO: figure out how to zero current sensor
-		// could use an average of recent points
+		// to zero the current sensor, we'll take the average of the circular buffer
+		m_zeroCurrentOffset += std::accumulate(m_storageBuffer.begin(), m_storageBuffer.end(), 0.) / m_storageBuffer.size();
 	}
 
 	// Clear the storage buffer and set the storage buffer pointer to the start of the array
 	void CurrentSensor::clearStorageBuffer()
 	{
-		m_storageBuffer.assign(CURRENT_SENSOR_STORAGE_LENGTH, 0);
+		m_storageBuffer.assign(CURRENT_SENSOR_STORAGE_LENGTH, m_zeroCurrentOffset);
 		m_storageBufferPtr = m_storageBuffer.begin();
 	}
 

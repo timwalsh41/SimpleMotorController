@@ -59,6 +59,21 @@ namespace MotorControl {
 		return true;
 	}
 
+	bool MotorCommandHandler::getMotorRotation(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		float rotation = m_pController->getMotorRotation();
+		uint32_t* p_rotation;
+		p_rotation = reinterpret_cast<uint32_t*>(&rotation);
+
+		payload.reserve(4);
+		payload.push_back((*p_rotation >> 0) & 0xFF);
+		payload.push_back((*p_rotation >> 8) & 0xFF);
+		payload.push_back((*p_rotation >> 16) & 0xFF);
+		payload.push_back((*p_rotation >> 24) & 0xFF);
+
+		return true;
+	}
+
 	bool MotorCommandHandler::getMotorPwm(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
 	{
 		// get PWM drive level from motor driver
@@ -93,6 +108,18 @@ namespace MotorControl {
 		bool direction = m_pController->getMotorDirection();
 		payload.push_back(direction ? 1 : 0);
 
+		return true;
+	}
+
+	bool MotorCommandHandler::zeroMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		m_pController->zeroMotorEncoder();
+		return true;
+	}
+
+	bool MotorCommandHandler::zeroMotorRotation(const MessageHandling::Message& msg, std::vector<uint8_t>& payload)
+	{
+		m_pController->zeroMotorRotation();
 		return true;
 	}
 

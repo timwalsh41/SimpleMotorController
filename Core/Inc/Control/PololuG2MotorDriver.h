@@ -45,7 +45,8 @@ namespace MotorControl
 		int32_t getEncoderCounts() const override { return m_encoderCount; }
 		float getShaftRotationCount() const override;
 
-		void zeroEncoder();
+		void zeroEncoder() override;
+		void zeroRotationCount() override;
 
 	private:
 		bool m_motorEnabled{false};
@@ -55,6 +56,7 @@ namespace MotorControl
 		int32_t m_dutyCycle{0};			// stored as tenths of a percent of the limit
 		int32_t m_encoderCount{0};
 		int32_t m_maxDutyCycle{750};	// stored as tenths of a percent of the limit
+		int32_t m_rotationCount{0};
 
 		void setHwDutyCycle(int32_t);
 

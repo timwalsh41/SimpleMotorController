@@ -118,6 +118,7 @@ class MotorCommander:
         # then be transmitted in the loop below 
         self.requestStatus()
         self.requestMotorPosition()
+        self.requestMotorRotation()
         self.requestMotorSpeed()
         self.requestMeanCurrent()
 
@@ -192,8 +193,10 @@ class MotorCommander:
             self._parseVersion(msg)
         elif commandCode == CommandInterface.CMD_GET_STATUS:
             self._parseStatus(msg)
-        elif commandCode == CommandInterface.CMD_GET_MOTOR_POS:
+        elif commandCode == CommandInterface.CMD_GET_MOTOR_POSITION:
             self._parseMotorPosition(msg)
+        elif commandCode == CommandInterface.CMD_GET_MOTOR_ROTATION:
+            self._parseMotorRotation(msg)
         elif commandCode == CommandInterface.CMD_GET_MOTOR_SPEED:
             self._parseMotorSpeed(msg)
         elif commandCode == CommandInterface.CMD_GET_MOTOR_CURRENT:
@@ -212,12 +215,16 @@ class MotorCommander:
             self._logger.error('No handler set up to parse response for command code 0x{commandCode:x}')
 
 
-    def requestVersion(self):
+    def _sendBasicMessage(self, commandCode):
         msg = Message()
-        msg.command_code = CommandInterface.CMD_GET_VERSION
+        msg.command_code = commandCode
         msg.set_crc()
 
         self._messageQueue.append(msg)
+
+
+    def requestVersion(self):
+        self._sendBasicMessage(CommandInterface.CMD_GET_VERSION)
 
 
     def _parseVersion(self, msg: Message):
@@ -228,44 +235,36 @@ class MotorCommander:
     
     
     def enableMotor(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_ENABLE_MOTOR
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_ENABLE_MOTOR)
+        
 
     def disableMotor(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_DISABLE_MOTOR
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_DISABLE_MOTOR)
+        
 
     def sleepMotor(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_SLEEP_DRIVER
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_SLEEP_DRIVER)
+        
 
     def wakeMotor(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_WAKE_DRIVER
-        msg.set_crc()
+        self._sendBasicMessage(CommandInterface.CMD_WAKE_DRIVER)
+        
 
-        self._messageQueue.append(msg)
+    def zeroMotorPosition(self):
+        self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_POSITION)
+        
+
+    def zeroMotorRotation(self):
+        self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_ROTATION)
+
+
+    def zeroMotorCurrent(self):
+        self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_CURRENT)
 
 
     def requestStatus(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_GET_STATUS
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_GET_STATUS)
+        
     
     def _parseStatus(self, msg: Message):
         payload = msg.payload
@@ -278,12 +277,8 @@ class MotorCommander:
 
 
     def requestLogMessage(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_GET_LOG_MESSAGE
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_GET_LOG_MESSAGE)
+        
 
     def _parseLogMessage(self, msg: Message):
         payload = msg.payload
@@ -353,28 +348,16 @@ class MotorCommander:
 
 
     def injectFault(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_INJECT_FAULT
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_INJECT_FAULT)
+        
 
     def clearFault(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_CLEAR_FAULT
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
+        self._sendBasicMessage(CommandInterface.CMD_CLEAR_FAULT)
 
 
     def requestMotorPosition(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_GET_MOTOR_POS
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_POSITION)
+        
 
     def _parseMotorPosition(self, msg: Message):
         payload = msg.payload
@@ -386,13 +369,23 @@ class MotorCommander:
         self._motorStatus.Position = struct.unpack('i', payload[1:5])[0]
 
 
+    def requestMotorRotation(self):
+        self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_ROTATION)
+        
+
+    def _parseMotorRotation(self, msg: Message):
+        payload = msg.payload
+        if len(payload) != 5:
+            self._logger.error(f'Invalid payload in motor rotation message (payload length {len(msg.payload)})')
+            return
+        
+        self._logger.debug('Sucessfully parsed motor rotation')
+        self._motorStatus.Rotation = struct.unpack('f', payload[1:5])[0]
+
+
     def requestMotorSpeed(self):
-        msg = Message()
-        msg.command_code = CommandInterface.CMD_GET_MOTOR_SPEED
-        msg.set_crc()
-
-        self._messageQueue.append(msg)
-
+        self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_SPEED)
+        
 
     def _parseMotorSpeed(self, msg: Message):
         payload = msg.payload
@@ -493,8 +486,9 @@ class MotorCommander:
         self._logger.info(f'\tMotor drive level: {self._driverStatus.DriveLevel}')
         self._logger.info(f'\tTime in state: {self._driverStatus.TimeInState_ms} ms')
         self._logger.info(f'\tMotor position: {self._motorStatus.Position}')
-        self._logger.info(f'\tMotor speed: {self._motorStatus.Speed}')
-        self._logger.info(f'\tMotor current: {self._motorStatus.Current}')
+        self._logger.info(f'\tMotor rotation: {self._motorStatus.Rotation:.2f}')
+        self._logger.info(f'\tMotor speed: {self._motorStatus.Speed:.2f}')
+        self._logger.info(f'\tMotor current: {self._motorStatus.Current:.2f}')
 
     
     def _buildCommandLabelMap(self):
@@ -509,7 +503,8 @@ class MotorCommander:
         self._commandLabelMap[CommandInterface.CMD_WAKE_DRIVER] = "wake motor"
         self._commandLabelMap[CommandInterface.CMD_CLEAR_FAULT] = "clear fault"
 
-        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_POS] = "get motor position"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_POSITION] = "get motor position"
+        self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_ROTATION] = "get motor rotation"
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_PWM] = "get motor PWM"
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_SPEED] = "get motor speed"
         self._commandLabelMap[CommandInterface.CMD_GET_MOTOR_DIR] = "get motor direction"
@@ -519,6 +514,9 @@ class MotorCommander:
         self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_ON] = "ramp motor on"
         self._commandLabelMap[CommandInterface.CMD_RAMP_MOTOR_OFF] = "ramp motor off"
         self._commandLabelMap[CommandInterface.CMD_SET_MAX_DC] = "set maximum DC"
+        self._commandLabelMap[CommandInterface.CMD_ZERO_MOTOR_POSITION] = "zero motor position"
+        self._commandLabelMap[CommandInterface.CMD_ZERO_MOTOR_ROTATION] = "zero motor rotation"
+        self._commandLabelMap[CommandInterface.CMD_ZERO_MOTOR_CURRENT] = "zero motor current"
 
         self._commandLabelMap[CommandInterface.CMD_INJECT_FAULT] = "inject fault"
         self._commandLabelMap[CommandInterface.CMD_GET_VERSION] = "get driver version"

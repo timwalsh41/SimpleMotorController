@@ -45,6 +45,8 @@ public:
 	MOCK_METHOD(void, setForwardDirection, (bool), (override));
 	MOCK_METHOD(int32_t, getEncoderCounts, (), (const override));
 	MOCK_METHOD(float, getShaftRotationCount, (), (const override));
+	MOCK_METHOD(void, zeroEncoder, (), (override));
+	MOCK_METHOD(void, zeroRotationCount, (), (override));
 	MOCK_METHOD(int32_t, getPwmDutyCycle, (), (const override));
 	MOCK_METHOD(void, setPwmDutyCycle, (int32_t), (override));
 	MOCK_METHOD(void, setMaxDutyCycle, (uint16_t), (override));

@@ -110,21 +110,6 @@ namespace MotorControl
 		updateState(nextState);
 	}
 
-	bool Controller::getMotorDirection() const
-	{
-		return m_pMotorDriver->getForwardDirection();
-	}
-
-	int32_t Controller::getMotorPosition() const
-	{
-		return m_pMotorDriver->getEncoderCounts();
-	}
-
-	uint16_t Controller::getMotorPwmLevel() const
-	{
-		return static_cast<uint16_t>(m_pMotorDriver->getPwmDutyCycle());
-	}
-
 	void Controller::sendCommand(bool forwardDirection, uint16_t dutyCycle, uint16_t rampTimeMs)
 	{
 		// TODO: this assumes tick time is 1 ms, otherwise a conversion is needed

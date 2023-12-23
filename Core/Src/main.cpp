@@ -192,6 +192,10 @@ int main(void)
   // apply offset to zero encoder mid-range
   theMotorDriver.zeroEncoder();
 
+  // give a short delay to build up current samples, then we'll zero the sensor
+  HAL_Delay(100);
+  pCurrentSensor->zeroCurrentSensor();
+
 #ifdef DEBUG
   uint8_t version[3];
   Utility::getVersion(version);
@@ -201,7 +205,6 @@ int main(void)
 							  std::to_string(version[2]);
   pLogger->logString(info, welcomeString);
 #endif
-
 
   /* USER CODE END 2 */
 

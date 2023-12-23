@@ -35,9 +35,6 @@ namespace Sensors
 	constexpr int CURRENT_SENSOR_STORAGE_LENGTH = CURRENT_SENSOR_MEASUREMENTS_PER_TICK * \
 					   CURRENT_SENSOR_STORAGE_LENGTH_TICKS;
 
-	// default zero offset for current sensor reading
-	constexpr uint32_t CURRENT_SENSOR_ZERO_OFFSET = 0;
-
 	// conversion factor from ADC number to mA
 	// TODO: Set conversion factor
 	constexpr float ADC_TO_MA = 1;
@@ -60,6 +57,9 @@ namespace Sensors
 
 		void zeroCurrentSensor();
 
+		// command handler to zero motor current
+		bool zeroCurrentSensor(const MessageHandling::Message& msg, std::vector<uint8_t>& payload);
+
 	private:
 		// Ping pong buffers for storing ADC readings and processing them in main loop
 		uint32_t m_pBufferA[CURRENT_SENSOR_BUFFER_SIZE];
@@ -73,11 +73,11 @@ namespace Sensors
 		std::vector<float> m_storageBuffer;
 		std::vector<float>::iterator m_storageBufferPtr;
 
+		// we can set an offset to zero the current sensor value
+		float m_zeroCurrentOffset{0};
+
 		// flag for when a buffer is full and ready to be processed
 		bool m_bBufferReady{false};
-
-		// zero offset, in ADC counts
-		uint32_t m_zeroCurrentOffset{CURRENT_SENSOR_ZERO_OFFSET};
 
 		std::shared_ptr<Logging::BaseLogger> m_pLogger;
 	};

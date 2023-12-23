@@ -37,6 +37,8 @@ namespace MotorControl
 
 		virtual int32_t getEncoderCounts() const = 0;
 		virtual float getShaftRotationCount() const = 0;
+		virtual void zeroEncoder() = 0;
+		virtual void zeroRotationCount() = 0;
 
 		virtual int32_t getPwmDutyCycle() const = 0;
 		virtual void setPwmDutyCycle(int32_t) = 0;

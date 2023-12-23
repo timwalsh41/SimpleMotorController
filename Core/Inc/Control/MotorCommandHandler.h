@@ -25,9 +25,12 @@ public:
 	bool sleepDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool wakeDriver(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
+	bool getMotorRotation(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorPwm(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorSpeed(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool getMotorDirection(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
+	bool zeroMotorPosition(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
+	bool zeroMotorRotation(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool rampMotorOn(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool rampMotorOff(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;
 	bool setMaxDutyCycle(const MessageHandling::Message& msg, std::vector<uint8_t>& payload) override;

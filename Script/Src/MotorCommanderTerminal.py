@@ -55,6 +55,9 @@ while True:
          print('\tw:\twake driver')
          print('\tj:\tinject fault')
          print('\tc:\tclear fault')
+         print('\tz:\tzero motor rotation position value')
+         print('\tx:\tzero motor encoder position value')
+         print('\ta:\tzero motor current value')
          print('\ti:\tset display level to severity INFO')
          print('\tg:\tset display level to severity DEBUG')
          print('\tq:\tquit')
@@ -97,6 +100,12 @@ while True:
          commander.rampMotorOn(500, 100, False)
     elif c == '8':
          commander.rampMotorOn(750, 100, False)
+    elif c == 'x':
+         commander.zeroMotorPosition()
+    elif c == 'z':
+         commander.zeroMotorRotation()
+    elif c == 'a':
+         commander.zeroMotorCurrent()
     elif c == ',':
          commander.rampMotorOn(max(10*commander._driverStatus.DriveLevel-50,0), 25, commander._driverStatus.ForwardDirection)
     elif c == '.':
