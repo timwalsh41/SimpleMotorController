@@ -25,15 +25,16 @@ CURRENT_SENSOR_MEASUREMENTS_PER_MS = 20
 # use daemonize=True to have the MotorCommander object run the tick in the background
 # at a 10 Hz rate
 class MotorCommander:
-    def __init__(self, port, daemonize=False, tickTime_s=0.1):
-        if type(tickTime_s) not in (int, float):
-            raise TypeError('tickTime_s must be a numeric value greater than zero')
-        
-        if tickTime_s <= 0:
-            raise TypeError('tickTime_s must be a numeric value greater than zero')
-        
+    def __init__(self, port, daemonize=False, tickTime_s=0.1, customLogHandler=None):        
         if type(daemonize) is not bool:
             raise TypeError('daemonize must be true or false')
+        
+        if daemonize:
+            if type(tickTime_s) not in (int, float):
+                raise TypeError('tickTime_s must be a numeric value greater than zero')
+        
+            if tickTime_s <= 0:
+                raise TypeError('tickTime_s must be a numeric value greater than zero')
 
         self._messageQueue = deque()
         self._commandLabelMap = {}
@@ -44,7 +45,7 @@ class MotorCommander:
         self._driverStatus = MotorCommanderDataClasses.DriverStatus()
         self._motorStatus = MotorCommanderDataClasses.MotorStatus()
         self._buildCommandLabelMap()
-        self._initializeLogging()
+        self._initializeLogging(customLogHandler)
 
         self._logger.info('MotorCommander')
         self._logger.info(f'Attempting to connect to motor driver on {port}')
@@ -79,23 +80,28 @@ class MotorCommander:
             self._tickTimer.cancel()
 
 
-    def _initializeLogging(self):
+    def _initializeLogging(self, customLogHandler):
         self._rootLogger = logging.getLogger()
         self._rootLogger.setLevel(logging.DEBUG)
 
-        self._streamHandler = logging.StreamHandler()
-        self._streamHandler.setLevel(logging.DEBUG)
-        self._streamHandler.terminator = '\r\n'
-        formatter = logging.Formatter('%(asctime)-20s : %(name)-15s : %(levelname)-8s : %(message)s')
-        self._streamHandler.setFormatter(formatter)
+        if customLogHandler is not None:
+            self._rootLogger.addHandler(customLogHandler)
+            customLogHandler.setLevel(logging.DEBUG)
+            self._streamHandler = None
+        else:
+            self._streamHandler = logging.StreamHandler()
+            self._streamHandler.setLevel(logging.DEBUG)
+            self._streamHandler.terminator = '\r\n'
+            formatter = logging.Formatter('%(asctime)-20s : %(name)-15s : %(levelname)-8s : %(message)s')
+            self._streamHandler.setFormatter(formatter)
 
-        current_datetime = datetime.now().strftime("%Y%m%d-%H%M%S")
-        file_handler = logging.FileHandler(f'MotorCommander-{current_datetime}.log')
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
+            current_datetime = datetime.now().strftime("%Y%m%d-%H%M%S")
+            file_handler = logging.FileHandler(f'MotorCommander-{current_datetime}.log')
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(formatter)
 
-        self._rootLogger.addHandler(self._streamHandler)
-        self._rootLogger.addHandler(file_handler)
+            self._rootLogger.addHandler(self._streamHandler)
+            self._rootLogger.addHandler(file_handler)
 
         # create a named logger so the MotorCommander log lines are readable and not just
         # tagged with "root"
@@ -128,7 +134,7 @@ class MotorCommander:
 
             if len(response) == 0:
                 # if we're not getting responses, then assume we can stop
-                # (this is overrided below if there are more messages to transmit)
+                # (this is overridden below if there are more messages to transmit)
                 continueFlag = False
             else:
                 self._messageBytes.extend(response)
@@ -141,7 +147,11 @@ class MotorCommander:
                         self._parseResponse(msg)
                     else:
                         if msg.command_code is not None:
-                            self._logger.error(f'Error parsing {self._commandLabelMap[msg.command_code & ~CommandInterface.ACK_BIT_MASK]} message: {messageParseSuccess.name}')
+                            if messageParseSuccess != MessageParsingErrorCode.NO_STOP_SEQUENCE and \
+                               messageParseSuccess != MessageParsingErrorCode.BYTE_ARRAY_TOO_SHORT:
+                                # we don't log missing stop sequence and byte array too short errors as those are likely fixed by a
+                                # subsequent serial read
+                                self._logger.error(f'Error parsing {self._commandLabelMap[msg.command_code & ~CommandInterface.ACK_BIT_MASK]} message: {messageParseSuccess.name}')
                         else:
                             self._logger.error(f'Error parsing message: {messageParseSuccess.name}')
             
@@ -294,9 +304,9 @@ class MotorCommander:
             # we have retrieved the last message available
             self._driverStatus.IsLogMessageAvailable = False
 
-        # logTimestamp = struct.unpack('I', payload[3:7])[0]
+        logTimestamp = struct.unpack('I', payload[3:7])[0]
         messageLength = struct.unpack('H', payload[7:9])[0]
-        # messageSeverity = payload[9]
+        messageSeverity = MotorCommanderDataClasses.DriverLogSeverityMap[payload[9]]
 
         # check that payload length matches the expected message length
         if len(payload) != 10 + messageLength:
@@ -305,7 +315,7 @@ class MotorCommander:
         logMessage = payload[10:].decode('ascii', 'ignore')
 
         # cut off the '\r\n' from the transmitted message
-        self._logger.info(f'DRIVER LOG::{logMessage[:-2]}')        
+        self._logger.log(messageSeverity, f'DRIVER LOG::{logTimestamp}::{logMessage[:-2]}')
 
 
     def rampMotorOn(self, driveLevel: int, rampTime_ms: int, forwardDirection: bool):
@@ -475,10 +485,8 @@ class MotorCommander:
 
 
     def printStatus(self):
-        driverState = MotorCommanderDataClasses.MotorControlState(self._driverStatus.ControllerState)
-        
         self._logger.info('Motor driver status:')
-        self._logger.info(f'\tState: {MotorCommanderDataClasses.MotorStatusLabel[driverState]}')
+        self._logger.info(f'\tState: {self._driverStatus.ControllerState.name}')
         self._logger.info(f'\tDirection: {"forward" if self._driverStatus.ForwardDirection else "reverse"}')
         self._logger.info(f'\tSleeping: {self._driverStatus.IsSleeping}')
         self._logger.info(f'\tFaulted: {self._driverStatus.IsFaulted}')
@@ -529,11 +537,17 @@ class MotorCommander:
 
 
     def setStreamLogLevelInfo(self):
+        if self._streamHandler is None:
+            return
+        
         self._streamHandler.setLevel(logging.INFO)
         self._logger.info('Setting stream log level to INFO')
 
     
     def setStreamLogLevelDebug(self):
+        if self._streamHandler is None:
+            return
+        
         self._streamHandler.setLevel(logging.DEBUG)
         self._logger.info('Setting stream log level to DEBUG')
 

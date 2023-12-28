@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 import struct
 import CommandInterface
+import logging
 
 # defined in MotorControlState.h
 class MotorControlState(Enum):
@@ -13,15 +14,15 @@ class MotorControlState(Enum):
     RUNNING = 5
     RAMP = 6
 
-MotorStatusLabel =  {
-                        MotorControlState.UNSET:'UNSET',
-                        MotorControlState.DISABLED: 'DISABLED',
-                        MotorControlState.SLEEPING: 'SLEEPING',
-                        MotorControlState.FAULT: 'FAULT',
-                        MotorControlState.IDLE: 'IDLE',
-                        MotorControlState.RUNNING: 'RUNNING',
-                        MotorControlState.RAMP: 'RAMP'
-                    }
+
+DriverLogSeverityMap = {
+    0: logging.DEBUG,
+    1: logging.INFO,
+    2: logging.WARNING,
+    3: logging.ERROR,
+    4: logging.CRITICAL
+}
+
 
 @dataclass
 class DriverStatus:
@@ -50,7 +51,7 @@ class DriverStatus:
         if payload[0] != CommandInterface.ACK_SUCCESSFUL:
             raise ValueError('Status message command was not successfully completed')
 
-        self.ControllerState = payload[1]
+        self.ControllerState = MotorControlState(payload[1])
         self.ForwardDirection = (payload[2] & 0x01) > 0
         self.IsFaulted = (payload[2] & 0x02) > 0
         self.IsSleeping = (payload[2] & 0x04) > 0

@@ -28,7 +28,7 @@ namespace Logging
 	void RealLogger::logString(LogLevel level, const std::string& inputString)
 	{
 		MessageHandling::Message msg;
-		std::string outputString = std::to_string(m_pTimebase->getTime_ms()) + ": [" + std::string(logLevelString[level]) + "] " + inputString + "\r\n";
+		std::string outputString = inputString + "\r\n";
 		
 		// if we can allocate memory for the log string (e.g. logStringToMessage succeeds) we'll send it, otherwise there's nothing we can do...
 		if (logStringToMessage(msg, outputString, level))
