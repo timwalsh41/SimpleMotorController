@@ -117,16 +117,20 @@ class MotorCommander:
 
 
     def tick(self):
+        """
+        Update function to be called at regular interval, requests system status and
+        handles UART serial communication
+        """
         continueFlag = True
 
         # standard commands to run each iteration of the tick loop
         # these function calls will add messages to the command queue that will
         # then be transmitted in the loop below 
-        self.requestStatus()
-        self.requestMotorPosition()
-        self.requestMotorRotation()
-        self.requestMotorSpeed()
-        self.requestMeanCurrent()
+        self.requestStatus(autoTick=False)
+        self.requestMotorPosition(autoTick=False)
+        self.requestMotorRotation(autoTick=False)
+        self.requestMotorSpeed(autoTick=False)
+        self.requestMeanCurrent(autoTick=False)
 
         while continueFlag:
             # send messages in queue            
@@ -158,7 +162,18 @@ class MotorCommander:
             if len(self._messageQueue) > 0:
                 continueFlag = True
 
+            # add a short delay to allow additional message bytes to be received
             time.sleep(0.001)
+
+
+    def _tickIfNeeded(self):
+        """
+        Will call the tick function if the MotorCommander object is not daemonized
+        """
+        if self._daemonize:
+            return
+
+        self.tick()
 
 
     def _checkStatusByte(self, msg: Message):
@@ -233,8 +248,10 @@ class MotorCommander:
         self._messageQueue.append(msg)
 
 
-    def requestVersion(self):
+    def requestVersion(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_VERSION)
+        if autoTick:
+            self._tickIfNeeded()
 
 
     def _parseVersion(self, msg: Message):
@@ -244,36 +261,52 @@ class MotorCommander:
         self._logger.info(f'Motor driver version {msg.payload[1]}.{msg.payload[2]}.{msg.payload[3]}')
     
     
-    def enableMotor(self):
+    def enableMotor(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_ENABLE_MOTOR)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def disableMotor(self):
+    def disableMotor(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_DISABLE_MOTOR)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def sleepMotor(self):
+    def sleepMotor(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_SLEEP_DRIVER)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def wakeMotor(self):
+    def wakeMotor(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_WAKE_DRIVER)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def zeroMotorPosition(self):
+    def zeroMotorPosition(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_POSITION)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def zeroMotorRotation(self):
+    def zeroMotorRotation(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_ROTATION)
+        if autoTick:
+            self._tickIfNeeded()
 
 
-    def zeroMotorCurrent(self):
+    def zeroMotorCurrent(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_ZERO_MOTOR_CURRENT)
+        if autoTick:
+            self._tickIfNeeded()
 
 
-    def requestStatus(self):
+    def requestStatus(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_STATUS)
+        if autoTick:
+            self._tickIfNeeded()
         
     
     def _parseStatus(self, msg: Message):
@@ -286,8 +319,10 @@ class MotorCommander:
         self._driverStatus = MotorCommanderDataClasses.DriverStatus(msg.payload)
 
 
-    def requestLogMessage(self):
+    def requestLogMessage(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_LOG_MESSAGE)
+        if autoTick:
+            self._tickIfNeeded()
         
 
     def _parseLogMessage(self, msg: Message):
@@ -318,7 +353,7 @@ class MotorCommander:
         self._logger.log(messageSeverity, f'DRIVER LOG::{logTimestamp}::{logMessage[:-2]}')
 
 
-    def rampMotorOn(self, driveLevel: int, rampTime_ms: int, forwardDirection: bool):
+    def rampMotorOn(self, driveLevel: int, rampTime_ms: int, forwardDirection: bool, autoTick=True):
         if type(driveLevel) not in (int, float):
             raise TypeError('Drive level must be a number between 0 and 1000 (100%)')
         if driveLevel < 0 or driveLevel > 1000:
@@ -341,9 +376,11 @@ class MotorCommander:
 
         msg.set_crc()
         self._messageQueue.append(msg)
+        if autoTick:
+            self._tickIfNeeded()
 
 
-    def rampMotorOff(self, rampTime_ms: int):
+    def rampMotorOff(self, rampTime_ms: int, autoTick=True):
         if type(rampTime_ms) != int:
             raise TypeError('Ramp time (ms) must be an integer of at least 25')
         if rampTime_ms < 25:
@@ -355,18 +392,26 @@ class MotorCommander:
 
         msg.set_crc()
         self._messageQueue.append(msg)
+        if autoTick:
+            self._tickIfNeeded()
 
 
-    def injectFault(self):
+    def injectFault(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_INJECT_FAULT)
+        if autoTick:
+            self._tickIfNeeded()
         
 
-    def clearFault(self):
+    def clearFault(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_CLEAR_FAULT)
+        if autoTick:
+            self._tickIfNeeded()
 
 
-    def requestMotorPosition(self):
+    def requestMotorPosition(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_POSITION)
+        if autoTick:
+            self._tickIfNeeded()
         
 
     def _parseMotorPosition(self, msg: Message):
@@ -379,8 +424,10 @@ class MotorCommander:
         self._motorStatus.Position = struct.unpack('i', payload[1:5])[0]
 
 
-    def requestMotorRotation(self):
+    def requestMotorRotation(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_ROTATION)
+        if autoTick:
+            self._tickIfNeeded()
         
 
     def _parseMotorRotation(self, msg: Message):
@@ -393,8 +440,10 @@ class MotorCommander:
         self._motorStatus.Rotation = struct.unpack('f', payload[1:5])[0]
 
 
-    def requestMotorSpeed(self):
+    def requestMotorSpeed(self, autoTick=True):
         self._sendBasicMessage(CommandInterface.CMD_GET_MOTOR_SPEED)
+        if autoTick:
+            self._tickIfNeeded()
         
 
     def _parseMotorSpeed(self, msg: Message):
@@ -407,7 +456,7 @@ class MotorCommander:
         self._motorStatus.Speed = struct.unpack('f', payload[1:5])[0]
 
 
-    def requestMotorCurrent(self):
+    def requestMotorCurrent(self, autoTick=True):
         msg = Message()
         msg.command_code = CommandInterface.CMD_GET_MOTOR_CURRENT
 
@@ -418,6 +467,8 @@ class MotorCommander:
         msg.set_crc()
 
         self._messageQueue.append(msg)
+        if autoTick:
+            self._tickIfNeeded()
 
 
     def _parseMotorCurrent(self, msg: Message):
@@ -442,7 +493,7 @@ class MotorCommander:
         self._logger.debug('Successfully parsed motor current')
 
 
-    def requestMeanCurrent(self):
+    def requestMeanCurrent(self, autoTick=True):
         msg = Message()
         msg.command_code = CommandInterface.CMD_GET_MEAN_CURRENT
 
@@ -453,6 +504,8 @@ class MotorCommander:
         msg.set_crc()
 
         self._messageQueue.append(msg)
+        if autoTick:
+            self._tickIfNeeded()
 
 
     def _parseMeanCurrent(self, msg: Message):
@@ -469,7 +522,7 @@ class MotorCommander:
         self._logger.debug('Successfully parsed mean current')
 
 
-    def setMaxDutyCycle(self, dutyCycle: int):
+    def setMaxDutyCycle(self, dutyCycle: int, autoTick=True):
         if type(dutyCycle) != int:
             raise TypeError('Duty cycle must be an integer')
         
@@ -482,6 +535,8 @@ class MotorCommander:
         msg.set_crc()
 
         self._messageQueue.append(msg)
+        if autoTick:
+            self._tickIfNeeded()
 
 
     def printStatus(self):

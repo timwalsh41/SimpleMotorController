@@ -69,7 +69,7 @@ class MotorStatus:
     Current: float      # motor current, AU
     Rotation: float     # motor rotational position (rotations of output shaft)
 
-    def __init__(self, position = None, speed = None, current = None):
+    def __init__(self, position = None, speed = None, current = None, rotation = None):
         if position is None:
             self.Position = 0
         else:
@@ -93,3 +93,11 @@ class MotorStatus:
                 self.Current = float(current)
             except:
                 raise TypeError ('Current must be a numeric value')
+            
+        if rotation is None:
+            self.Rotation = 0
+        else:
+            try:
+                self.Rotation = float(rotation)
+            except:
+                raise TypeError ('Rotation must be a numeric value')
